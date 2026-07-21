@@ -30,9 +30,9 @@ A full-stack web application that tracks Indian trains in real time and predicts
                                      │
                                      ▼
                           ┌──────────────────────┐
-                          │  Python (XGBoost)    │
-                          │  predict_xgb.py      │
-                          │  best_model_v1.pkl   │
+                          │  Python (XGBoost)        │
+                          │  predict_xgb.py          │
+                          │  best_model_v1.pkl.      │
                           └──────────────────────┘
 ```
 
