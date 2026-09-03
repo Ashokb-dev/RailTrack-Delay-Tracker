@@ -61,11 +61,11 @@ app.post("/predict-future-stations", async (req, res) => {
     // FILTER ROUTE
     // ======================================
 
-    if (searchMode === "stations" && from && to) {
+    if (from && to) {
       const startIndex = routeStations.findIndex((s) => (s.station?.code || s.stationCode || s.code) === from);
       const endIndex = routeStations.findIndex((s) => (s.station?.code || s.stationCode || s.code) === to);
 
-      if (startIndex !== -1 && endIndex !== -1) {
+      if (startIndex !== -1 && endIndex !== -1 && startIndex <= endIndex) {
         routeStations = routeStations.slice(startIndex, endIndex + 1);
       }
     }
