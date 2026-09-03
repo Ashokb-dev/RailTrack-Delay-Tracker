@@ -46,11 +46,13 @@ app.post("/predict-future-stations", async (req, res) => {
     // LIVE TRAIN API
     // ======================================
 
-    const url = `https://api.railradar.in/api/v1/trains/${trainNumber}?journeyDate=${journeyDate}&dataType=live&apiKey=${API_KEY}`;
+    const url = `https://api.railradar.in/v1/trains/${trainNumber}?journeyDate=${journeyDate}&dataType=live&apiKey=${API_KEY}`;
 
     console.log("Fetching train route:", url);
 
-    const response = await axios.get(url);
+    const response = await axios.get(url, {
+      headers: { Authorization: `Bearer ${API_KEY}` }
+    });
     const liveData = response.data;
 
     let routeStations = liveData.data?.route || [];
@@ -211,8 +213,10 @@ app.post("/search-trains", async (req, res) => {
       return res.status(400).json({ error: "from and to are required" });
     }
 
-    const url = `https://api.railradar.in/api/v1/trains/between?from=${from}&to=${to}&apiKey=${API_KEY}`;
-    const response = await axios.get(url);
+    const url = `https://api.railradar.in/v1/trains/between/${from}/${to}?apiKey=${API_KEY}`;
+    const response = await axios.get(url, {
+      headers: { Authorization: `Bearer ${API_KEY}` }
+    });
     res.json(response.data);
   } catch (err) {
     console.error("Search trains error:", err.message);

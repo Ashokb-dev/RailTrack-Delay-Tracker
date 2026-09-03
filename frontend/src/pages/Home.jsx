@@ -134,67 +134,45 @@ const [journeyDate, setJourneyDate] =
 
         setLoading(true);
 
+        const fromCode = (from || "").trim().toUpperCase();
+        const toCode = (to || "").trim().toUpperCase();
+
+        if (!fromCode || !toCode) {
+          alert("Please enter both FROM and TO station codes (e.g. PUNE and CSMT)");
+          return;
+        }
+
         const response =
           await axios.post(
             `${API_URL}/search-trains`,
             {
-              from,
-              to,
+              from: fromCode,
+              to: toCode,
               journeyDate
             }
           );
 
-        let trainData = [];
+        const rawList =
+          response.data?.data?.trains ||
+          response.data?.data ||
+          response.data ||
+          [];
 
-        // ======================================
-        // HANDLE API STRUCTURE
-        // ======================================
-
-        if (
-
-          response.data?.data?.trains &&
-          Array.isArray(
-            response.data.data.trains
-          )
-
-        ) {
-
-          trainData =
-            response.data.data.trains;
-
-        }
-
-        else if (
-
-          Array.isArray(
-            response.data?.data
-          )
-
-        ) {
-
-          trainData =
-            response.data.data;
-
-        }
-
-        else if (
-
-          Array.isArray(
-            response.data
-          )
-
-        ) {
-
-          trainData =
-            response.data;
-
-        }
+        const trainData = (Array.isArray(rawList) ? rawList : []).map((t) => ({
+          trainNumber: t.train?.number || t.trainNumber || t.number || "",
+          trainName: t.train?.name || t.trainName || t.name || "",
+          from: t.from?.code || t.from || fromCode,
+          to: t.to?.code || t.to || toCode,
+          departureTime: t.from?.departure || "",
+          arrivalTime: t.to?.arrival || "",
+          raw: t
+        }));
 
         setTrains(trainData);
 
       } catch (err) {
 
-        console.error(err);
+        console.error("Error searching trains:", err);
 
         alert(
           err.response?.data?.error || "Failed to fetch trains"
