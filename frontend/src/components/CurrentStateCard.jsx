@@ -36,7 +36,7 @@ export const CurrentStateCard = ({
             <span className="text-xl font-extrabold text-slate-900 tracking-tight">
               {currentLocationName || currentLocationCode || "---"}
             </span>
-            {currentLocationCode && (
+            {currentLocationCode && currentLocationCode !== currentLocationName && (
               <span className="px-2 py-0.5 rounded text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200">
                 {currentLocationCode}
               </span>
@@ -84,7 +84,7 @@ export const CurrentStateCard = ({
             <span className="text-xl font-extrabold text-slate-900 tracking-tight">
               {nextStationName || nextStationCode || "---"}
             </span>
-            {nextStationCode && (
+            {nextStationCode && nextStationCode !== nextStationName && (
               <span className="px-2 py-0.5 rounded text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200">
                 {nextStationCode}
               </span>
@@ -110,7 +110,7 @@ export const CurrentStateCard = ({
             {predictedDestinationEta || "--:--"}
           </div>
           <div className="text-xs font-medium text-slate-600 mt-1">
-            {destinationName || "Destination"} ({destinationCode})
+            {destinationName || "Destination"} {destinationCode && destinationCode !== destinationName ? `(${destinationCode})` : ""}
           </div>
         </div>
         <div className="mt-3 pt-2 border-t border-slate-100 text-xs text-slate-400">

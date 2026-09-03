@@ -166,6 +166,9 @@ for index, station in enumerate(stations):
             "station":
                 station["station"],
 
+            "stationName":
+                station.get("stationName", station["station"]),
+
             "scheduled_time":
                 scheduled_time,
 
@@ -319,6 +322,9 @@ for index, station in enumerate(stations):
             "station":
                 station["station"],
 
+            "stationName":
+                station.get("stationName", station["station"]),
+
             "predicted_time":
                 minutes_to_time(
                     predicted_minutes
@@ -338,6 +344,9 @@ for index, station in enumerate(stations):
 
         "station":
             station["station"],
+
+        "stationName":
+            station.get("stationName", station["station"]),
 
         "scheduled_time":
             scheduled_time,
