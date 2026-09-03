@@ -216,7 +216,10 @@ app.post("/search-trains", async (req, res) => {
     res.json(response.data);
   } catch (err) {
     console.error("Search trains error:", err.message);
-    const detail = err.response?.data?.error || err.response?.data?.message || err.message;
+    if (err.response?.status === 404 || err.response?.data?.error?.code === 'NOT_FOUND') {
+      return res.json([]);
+    }
+    const detail = err.response?.data?.error?.message || err.response?.data?.error || err.response?.data?.message || err.message;
     res.status(err.response?.status || 500).json({ error: `RailRadar API Error: ${detail}` });
   }
 });
