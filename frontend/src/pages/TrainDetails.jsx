@@ -28,9 +28,10 @@ export default function TrainDetails() {
   const [
     confidence,
     setConfidence
-  ] = useState(0);
+]
+  = useState(0);
 
-  useEffect(() => {
+useEffect(() => {
 
     const fetchPrediction =
       async () => {
@@ -38,20 +39,16 @@ export default function TrainDetails() {
         try {
 
           const response =
-  await axios.post(
-    "http://localhost:5000/predict-future-stations",
-    {
-      trainNumber:
-        train.trainNumber,
-
-      journeyDate,
-
-      from,
-      to,
-
-      searchMode
-    }
-  );
+            await axios.post(
+              `${import.meta.env.VITE_API_URL}/predict-future-stations`,
+              {
+                trainNumber: train.trainNumber,
+                journeyDate,
+                from,
+                to,
+                searchMode
+              }
+            );
 
           setStationPredictions(
             response.data.predictions || []
@@ -66,7 +63,6 @@ export default function TrainDetails() {
           console.error(err);
 
         }
-
       };
 
     fetchPrediction();
