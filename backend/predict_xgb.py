@@ -406,6 +406,18 @@ output = {
     "confidence":
         round(confidence, 2),
 
+    "current_location":
+        data.get("current_location"),
+
+    "next_halt":
+        data.get("next_halt"),
+
+    "previous_halt":
+        data.get("previous_halt"),
+
+    "live_delay_minutes":
+        data.get("live_delay_minutes"),
+
     "destination_eta":
         destination_eta,
 

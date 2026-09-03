@@ -40,29 +40,49 @@ export function transformPredictionResponse(backendData, trainInfo = {}, routeIn
   // 2. Identify Current Station Index & Partition
   // Current station index is the index of the last observed station, or index 0 if not yet started
   let currentStationIdx = 0;
+  let hasObservedStation = false;
   for (let i = 0; i < stations.length; i++) {
     if (stations[i].isObserved) {
       currentStationIdx = i;
+      hasObservedStation = true;
     }
   }
 
-  const currentStationObj = stations[currentStationIdx] || {
-    code: routeInfo.from || "MYS",
-    name: routeInfo.from || "Mysuru Jn",
-    actualDelayMinutes: 0
-  };
+  // Check if live telemetry current_location is passed directly from RailRadar API
+  const liveLocation = backendData?.current_location;
+  const liveNextHalt = backendData?.next_halt;
 
-  const currentDelayMinutes = currentStationObj.actualDelayMinutes ?? 0;
+  const currentStationObj = liveLocation
+    ? {
+        code: liveLocation.stationCode || liveLocation.code || stations[currentStationIdx]?.code || routeInfo.from || "MYS",
+        name: liveLocation.stationName || liveLocation.name || stations[currentStationIdx]?.name || routeInfo.from || "Mysuru Jn",
+        actualDelayMinutes: backendData?.live_delay_minutes ?? liveLocation.delayMinutes ?? stations[currentStationIdx]?.actualDelayMinutes ?? 0
+      }
+    : (hasObservedStation && stations[currentStationIdx])
+    ? stations[currentStationIdx]
+    : (stations[0] || {
+        code: routeInfo.from || "MYS",
+        name: routeInfo.from || "Mysuru Jn",
+        actualDelayMinutes: 0
+      });
+
+  const currentDelayMinutes = typeof backendData?.live_delay_minutes === "number"
+    ? backendData.live_delay_minutes
+    : (currentStationObj.actualDelayMinutes ?? 0);
 
   // Passed stations: index 0 to currentStationIdx - 1
   const passedStations = stations.slice(0, currentStationIdx);
 
   // Future Forecast Stations: STRICTLY stations AFTER currentStationIdx (index currentStationIdx + 1 to end)
-  // This guarantees that current station & passed stations NEVER appear in future forecast
   const futureForecastStations = stations.slice(currentStationIdx + 1);
 
-  // Next station: The first station in futureForecastStations
-  const nextStationObj = futureForecastStations.length > 0
+  // Next station: Use liveNextHalt from RailRadar API if available, otherwise first station in futureForecastStations
+  const nextStationObj = liveNextHalt
+    ? {
+        code: liveNextHalt.stationCode || liveNextHalt.code || "---",
+        name: liveNextHalt.stationName || liveNextHalt.name || "Next Station"
+      }
+    : futureForecastStations.length > 0
     ? futureForecastStations[0]
     : (stations[stations.length - 1] || { code: routeInfo.to || "SBC", name: routeInfo.to || "KSR Bengaluru" });
 

@@ -46,16 +46,33 @@ app.post("/predict-future-stations", async (req, res) => {
     // LIVE TRAIN API
     // ======================================
 
-    const url = `https://api.railradar.in/v1/trains/${trainNumber}?journeyDate=${journeyDate}&dataType=live&apiKey=${API_KEY}`;
+    let liveUrl = `https://api.railradar.in/v1/trains/${trainNumber}/live?apiKey=${API_KEY}`;
+    console.log("Fetching live train running status:", liveUrl);
 
-    console.log("Fetching train route:", url);
+    let liveData = null;
+    try {
+      const response = await axios.get(liveUrl, {
+        headers: { Authorization: `Bearer ${API_KEY}` }
+      });
+      liveData = response.data;
+    } catch (liveErr) {
+      console.log("Live endpoint fallback to timetable route endpoint...");
+      const fallbackUrl = `https://api.railradar.in/v1/trains/${trainNumber}?journeyDate=${journeyDate}&dataType=live&apiKey=${API_KEY}`;
+      const response = await axios.get(fallbackUrl, {
+        headers: { Authorization: `Bearer ${API_KEY}` }
+      });
+      liveData = response.data;
+    }
 
-    const response = await axios.get(url, {
-      headers: { Authorization: `Bearer ${API_KEY}` }
-    });
-    const liveData = response.data;
+    const dataObj = liveData?.data || {};
+    let routeStations = dataObj.route || [];
 
-    let routeStations = liveData.data?.route || [];
+    const currentLocation = dataObj.currentLocation || null;
+    const nextHalt = dataObj.nextHalt || null;
+    const previousHalt = dataObj.previousHalt || null;
+    const liveDelayMinutes = typeof dataObj.delayMinutes === "number"
+      ? dataObj.delayMinutes
+      : (typeof currentLocation?.delayMinutes === "number" ? currentLocation.delayMinutes : null);
 
     // ======================================
     // FILTER ROUTE
@@ -81,14 +98,18 @@ app.post("/predict-future-stations", async (req, res) => {
       const stationName = station.station?.name || station.stationName || station.name || `Station ${index + 1}`;
 
       let actualDelay = null;
-      if (station.delayArrivalMinutes !== undefined && station.delayArrivalMinutes !== null) {
+      if (station.delayArrival !== undefined && station.delayArrival !== null) {
+        actualDelay = Number(station.delayArrival);
+      } else if (station.delayDeparture !== undefined && station.delayDeparture !== null) {
+        actualDelay = Number(station.delayDeparture);
+      } else if (station.delayArrivalMinutes !== undefined && station.delayArrivalMinutes !== null) {
         actualDelay = Number(station.delayArrivalMinutes);
       } else if (station.delayDepartureMinutes !== undefined && station.delayDepartureMinutes !== null) {
         actualDelay = Number(station.delayDepartureMinutes);
       } else if (station.delayMinutes !== undefined && station.delayMinutes !== null) {
         actualDelay = Number(station.delayMinutes);
-      } else if (station.delay !== undefined && station.delay !== null) {
-        actualDelay = Number(station.delay);
+      } else if (station.status === "passed" || station.status === "current") {
+        actualDelay = liveDelayMinutes ?? 0;
       }
 
       const scheduledArrival = station.scheduledArrival
@@ -160,6 +181,7 @@ app.post("/predict-future-stations", async (req, res) => {
         inter_station_scheduled_mins: interStationTime,
         platform_num: platformNum,
         actual_delay: actualDelay,
+        status: station.status || (actualDelay !== null ? "passed" : "upcoming")
       };
     });
 
@@ -170,6 +192,10 @@ app.post("/predict-future-stations", async (req, res) => {
     const inputData = {
       train_number: Number(trainNumber),
       day_of_week: new Date(journeyDate).getDay(),
+      current_location: currentLocation,
+      next_halt: nextHalt,
+      previous_halt: previousHalt,
+      live_delay_minutes: liveDelayMinutes,
       stations,
     };
 
