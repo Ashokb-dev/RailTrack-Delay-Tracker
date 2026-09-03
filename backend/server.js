@@ -190,7 +190,8 @@ app.post("/predict-future-stations", async (req, res) => {
     });
   } catch (err) {
     console.error("Prediction route error:", err.message);
-    res.status(500).json({ error: "Future prediction failed", details: err.message });
+    const detail = err.response?.data?.error || err.response?.data?.message || err.message;
+    res.status(err.response?.status || 500).json({ error: "Future prediction failed", details: detail });
   }
 });
 
@@ -215,7 +216,8 @@ app.post("/search-trains", async (req, res) => {
     res.json(response.data);
   } catch (err) {
     console.error("Search trains error:", err.message);
-    res.status(500).json({ error: "Failed to fetch trains" });
+    const detail = err.response?.data?.error || err.response?.data?.message || err.message;
+    res.status(err.response?.status || 500).json({ error: `RailRadar API Error: ${detail}` });
   }
 });
 
