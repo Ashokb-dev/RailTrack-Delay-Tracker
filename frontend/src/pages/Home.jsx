@@ -9,6 +9,8 @@ export default function Home() {
 
   const navigate = useNavigate();
 
+  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+
   // ======================================
   // STATES
   // ======================================
@@ -62,7 +64,7 @@ const [journeyDate, setJourneyDate] =
 
       try {
 
-        if (!value) {
+        if (!value || !value.trim()) {
 
           if (type === "from") {
 
@@ -83,29 +85,39 @@ const [journeyDate, setJourneyDate] =
         const response =
           await axios.get(
 
-            `${import.meta.env.VITE_API_URL}/search-stations?query=${value}`
+            `${API_URL}/search-stations?query=${encodeURIComponent(value.trim())}`
 
           );
+
+        let list = [];
+        if (Array.isArray(response.data)) {
+          list = response.data;
+        } else if (Array.isArray(response.data?.data)) {
+          list = response.data.data;
+        } else if (Array.isArray(response.data?.stations)) {
+          list = response.data.stations;
+        }
 
         if (type === "from") {
 
-          setFromSuggestions(
-            response.data || []
-          );
+          setFromSuggestions(list);
 
         }
 
         else {
 
-          setToSuggestions(
-            response.data || []
-          );
+          setToSuggestions(list);
 
         }
 
       } catch (err) {
 
-        console.error(err);
+        console.error("Error fetching station suggestions:", err);
+        if (type === "from") {
+          setFromSuggestions([]);
+        } else {
+          setToSuggestions([]);
+        }
 
       }
 
@@ -124,7 +136,7 @@ const [journeyDate, setJourneyDate] =
 
         const response =
           await axios.post(
-            "${import.meta.env.VITE_API_URL}/search-trains",
+            `${API_URL}/search-trains`,
             {
               from,
               to,
@@ -185,7 +197,7 @@ const [journeyDate, setJourneyDate] =
         console.error(err);
 
         alert(
-          "Failed to fetch trains"
+          err.response?.data?.error || "Failed to fetch trains"
         );
 
       } finally {
@@ -268,7 +280,7 @@ const [journeyDate, setJourneyDate] =
 
               {
 
-                fromSuggestions.length > 0 && (
+                Array.isArray(fromSuggestions) && fromSuggestions.length > 0 && (
 
                   <div className="absolute z-20 bg-white border rounded-2xl shadow-lg mt-2 w-full max-h-60 overflow-y-auto">
 
@@ -276,37 +288,46 @@ const [journeyDate, setJourneyDate] =
 
                       fromSuggestions.map(
 
-                        (station, index) => (
+                        (station, index) => {
 
-                          <div
-                            key={index}
-                            onClick={() => {
+                          const code = typeof station === "object" ? station.code : station;
+                          const name = typeof station === "object" ? station.name : "";
 
-                              setFrom(
-                                station.code
-                              );
+                          return (
 
-                              setFromSuggestions([]);
+                            <div
+                              key={index}
+                              onClick={() => {
 
-                            }}
-                            className="p-3 hover:bg-slate-100 cursor-pointer border-b"
-                          >
+                                setFrom(code);
 
-                            <div className="font-semibold">
+                                setFromSuggestions([]);
 
-                              {station.code}
+                              }}
+                              className="p-3 hover:bg-slate-100 cursor-pointer border-b"
+                            >
+
+                              <div className="font-semibold">
+
+                                {code}
+
+                              </div>
+
+                              {name && (
+
+                                <div className="text-sm text-slate-500">
+
+                                  {name}
+
+                                </div>
+
+                              )}
 
                             </div>
 
-                            <div className="text-sm text-slate-500">
+                          );
 
-                              {station.name}
-
-                            </div>
-
-                          </div>
-
-                        )
+                        }
 
                       )
 
@@ -344,7 +365,7 @@ const [journeyDate, setJourneyDate] =
 
               {
 
-                toSuggestions.length > 0 && (
+                Array.isArray(toSuggestions) && toSuggestions.length > 0 && (
 
                   <div className="absolute z-20 bg-white border rounded-2xl shadow-lg mt-2 w-full max-h-60 overflow-y-auto">
 
@@ -352,37 +373,46 @@ const [journeyDate, setJourneyDate] =
 
                       toSuggestions.map(
 
-                        (station, index) => (
+                        (station, index) => {
 
-                          <div
-                            key={index}
-                            onClick={() => {
+                          const code = typeof station === "object" ? station.code : station;
+                          const name = typeof station === "object" ? station.name : "";
 
-                              setTo(
-                                station.code
-                              );
+                          return (
 
-                              setToSuggestions([]);
+                            <div
+                              key={index}
+                              onClick={() => {
 
-                            }}
-                            className="p-3 hover:bg-slate-100 cursor-pointer border-b"
-                          >
+                                setTo(code);
 
-                            <div className="font-semibold">
+                                setToSuggestions([]);
 
-                              {station.code}
+                              }}
+                              className="p-3 hover:bg-slate-100 cursor-pointer border-b"
+                            >
+
+                              <div className="font-semibold">
+
+                                {code}
+
+                              </div>
+
+                              {name && (
+
+                                <div className="text-sm text-slate-500">
+
+                                  {name}
+
+                                </div>
+
+                              )}
 
                             </div>
 
-                            <div className="text-sm text-slate-500">
+                          );
 
-                              {station.name}
-
-                            </div>
-
-                          </div>
-
-                        )
+                        }
 
                       )
 

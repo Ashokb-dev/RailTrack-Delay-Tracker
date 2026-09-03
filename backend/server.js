@@ -15,8 +15,7 @@ app.use(express.json());
 const API_KEY = process.env.RAILRADAR_API_KEY;
 
 if (!API_KEY) {
-  console.error("❌ RAILRADAR_API_KEY is not set in .env");
-  process.exit(1);
+  console.warn("⚠️ RAILRADAR_API_KEY is not set in backend/.env. External RailRadar API calls will require RAILRADAR_API_KEY.");
 }
 
 // ======================================
@@ -34,6 +33,10 @@ app.get("/", (req, res) => {
 app.post("/predict-future-stations", async (req, res) => {
   try {
     const { trainNumber, journeyDate, from, to, searchMode } = req.body;
+
+    if (!API_KEY) {
+      return res.status(400).json({ error: "RAILRADAR_API_KEY is not configured in backend/.env file." });
+    }
 
     if (!trainNumber || !journeyDate) {
       return res.status(400).json({ error: "trainNumber and journeyDate are required" });
@@ -198,6 +201,10 @@ app.post("/predict-future-stations", async (req, res) => {
 app.post("/search-trains", async (req, res) => {
   try {
     const { from, to } = req.body;
+
+    if (!API_KEY) {
+      return res.status(400).json({ error: "RAILRADAR_API_KEY is not configured in backend/.env file." });
+    }
 
     if (!from || !to) {
       return res.status(400).json({ error: "from and to are required" });
