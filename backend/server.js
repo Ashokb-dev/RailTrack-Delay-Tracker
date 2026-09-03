@@ -62,8 +62,8 @@ app.post("/predict-future-stations", async (req, res) => {
     // ======================================
 
     if (searchMode === "stations" && from && to) {
-      const startIndex = routeStations.findIndex((s) => s.stationCode === from);
-      const endIndex = routeStations.findIndex((s) => s.stationCode === to);
+      const startIndex = routeStations.findIndex((s) => (s.station?.code || s.stationCode || s.code) === from);
+      const endIndex = routeStations.findIndex((s) => (s.station?.code || s.stationCode || s.code) === to);
 
       if (startIndex !== -1 && endIndex !== -1) {
         routeStations = routeStations.slice(startIndex, endIndex + 1);
@@ -77,42 +77,51 @@ app.post("/predict-future-stations", async (req, res) => {
     // ======================================
 
     const stations = routeStations.map((station, index) => {
-      let actualDelay = null;
+      const stationCode = station.station?.code || station.stationCode || station.code || `ST-${index}`;
+      const stationName = station.station?.name || station.stationName || station.name || `Station ${index + 1}`;
 
-      if (
-        station.delayArrivalMinutes !== undefined &&
-        station.delayArrivalMinutes !== null
-      ) {
+      let actualDelay = null;
+      if (station.delayArrivalMinutes !== undefined && station.delayArrivalMinutes !== null) {
         actualDelay = Number(station.delayArrivalMinutes);
+      } else if (station.delayDepartureMinutes !== undefined && station.delayDepartureMinutes !== null) {
+        actualDelay = Number(station.delayDepartureMinutes);
+      } else if (station.delayMinutes !== undefined && station.delayMinutes !== null) {
+        actualDelay = Number(station.delayMinutes);
+      } else if (station.delay !== undefined && station.delay !== null) {
+        actualDelay = Number(station.delay);
       }
 
       const scheduledArrival = station.scheduledArrival
-        ? new Date(station.scheduledArrival * 1000)
+        ? (typeof station.scheduledArrival === "number" ? new Date(station.scheduledArrival * 1000) : new Date(station.scheduledArrival))
         : null;
 
       const scheduledDeparture = station.scheduledDeparture
-        ? new Date(station.scheduledDeparture * 1000)
+        ? (typeof station.scheduledDeparture === "number" ? new Date(station.scheduledDeparture * 1000) : new Date(station.scheduledDeparture))
         : null;
 
       const actualArrival = station.actualArrival
-        ? new Date(station.actualArrival * 1000)
+        ? (typeof station.actualArrival === "number" ? new Date(station.actualArrival * 1000) : new Date(station.actualArrival))
         : null;
 
       let scheduledHour = 12;
-      if (scheduledArrival) scheduledHour = scheduledArrival.getHours();
+      if (scheduledArrival && !isNaN(scheduledArrival.getTime())) scheduledHour = scheduledArrival.getHours();
 
       let actualHour = scheduledHour;
-      if (actualArrival) actualHour = actualArrival.getHours();
+      if (actualArrival && !isNaN(actualArrival.getTime())) actualHour = actualArrival.getHours();
 
-      let scheduledTime = "00:00";
-      if (scheduledArrival) {
+      let scheduledTime = "--:--";
+      if (scheduledArrival && !isNaN(scheduledArrival.getTime())) {
         const hh = String(scheduledArrival.getHours()).padStart(2, "0");
         const mm = String(scheduledArrival.getMinutes()).padStart(2, "0");
         scheduledTime = `${hh}:${mm}`;
+      } else if (typeof station.arrival === "string" && station.arrival.includes(":")) {
+        scheduledTime = station.arrival;
+      } else if (typeof station.departure === "string" && station.departure.includes(":")) {
+        scheduledTime = station.departure;
       }
 
       let dwellTime = 0;
-      if (scheduledArrival && scheduledDeparture) {
+      if (scheduledArrival && scheduledDeparture && !isNaN(scheduledArrival.getTime()) && !isNaN(scheduledDeparture.getTime())) {
         dwellTime = Math.max(0, (scheduledDeparture - scheduledArrival) / 60000);
       }
 
@@ -120,27 +129,29 @@ app.post("/predict-future-stations", async (req, res) => {
       if (index > 0) {
         const prevStation = routeStations[index - 1];
         if (prevStation.scheduledDeparture && station.scheduledArrival) {
-          interStationTime = Math.max(
-            0,
-            ((station.scheduledArrival - prevStation.scheduledDeparture) * 1000) / 60000
-          );
+          const prevDep = typeof prevStation.scheduledDeparture === "number" ? prevStation.scheduledDeparture * 1000 : new Date(prevStation.scheduledDeparture).getTime();
+          const currArr = typeof station.scheduledArrival === "number" ? station.scheduledArrival * 1000 : new Date(station.scheduledArrival).getTime();
+          if (!isNaN(prevDep) && !isNaN(currArr)) {
+            interStationTime = Math.max(0, (currArr - prevDep) / 60000);
+          }
         }
       }
 
       let platformNum = 1;
-      if (station.platformNumber) {
-        const parsed = parseInt(station.platformNumber);
-        if (!isNaN(parsed)) platformNum = parsed;
+      if (station.platformNumber || station.platform) {
+        const platformStr = String(station.platformNumber || station.platform);
+        const parsed = parseInt(platformStr.replace(/\D/g, ""));
+        if (!isNaN(parsed) && parsed > 0) platformNum = parsed;
       }
 
       return {
-        station: station.stationCode || station.stationName || `ST-${index}`,
-        stationName: station.stationName || station.stationCode || `Station ${index + 1}`,
+        station: stationCode,
+        stationName: stationName,
         sequence: station.sequence || index + 1,
         is_origin: index === 0 ? 1 : 0,
         is_destination: index === routeStations.length - 1 ? 1 : 0,
         scheduled_hour: scheduledHour,
-        scheduled_departure_hour: scheduledDeparture
+        scheduled_departure_hour: scheduledDeparture && !isNaN(scheduledDeparture.getTime())
           ? scheduledDeparture.getHours()
           : scheduledHour,
         actual_hour: actualHour,

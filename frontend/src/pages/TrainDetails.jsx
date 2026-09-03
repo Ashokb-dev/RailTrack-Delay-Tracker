@@ -176,6 +176,7 @@ export default function TrainDetails() {
             {/* 4. ROUTE PROGRESS */}
             <RouteProgress
               stations={telemetry.stations}
+              currentStationCode={telemetry.currentStation?.code}
               selectedStationCode={selectedStation?.code}
               onSelectStation={(st) => setSelectedStation(st)}
             />

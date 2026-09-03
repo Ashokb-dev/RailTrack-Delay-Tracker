@@ -32,15 +32,22 @@ export const CurrentStateCard = ({
           <MapPin className="w-4 h-4 text-blue-600" />
         </div>
         <div>
-          <div className="text-2xl font-bold text-slate-900 tracking-tight">
-            {currentLocationCode || "---"}
+          <div className="flex items-baseline gap-2 flex-wrap">
+            <span className="text-xl font-extrabold text-slate-900 tracking-tight">
+              {currentLocationName || currentLocationCode || "---"}
+            </span>
+            {currentLocationCode && (
+              <span className="px-2 py-0.5 rounded text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200">
+                {currentLocationCode}
+              </span>
+            )}
           </div>
-          <div className="text-sm font-medium text-slate-600 truncate mt-0.5">
-            {currentLocationName || "Observed Station"}
+          <div className="text-xs font-medium text-slate-500 mt-1">
+            Real live train location
           </div>
         </div>
         <div className="mt-3 pt-2 border-t border-slate-100 text-xs text-slate-400">
-          Last observed telemetry
+          Observed telemetry position
         </div>
       </div>
 
@@ -57,12 +64,12 @@ export const CurrentStateCard = ({
           )}>
             {isDelayed ? `+${currentDelayMinutes} min` : isEarly ? `${currentDelayMinutes} min` : "On Time"}
           </div>
-          <div className="text-sm font-medium text-slate-600 mt-0.5">
+          <div className="text-xs font-medium text-slate-500 mt-1">
             {isDelayed ? "Running Behind Schedule" : isEarly ? "Running Ahead" : "On Schedule"}
           </div>
         </div>
         <div className="mt-3 pt-2 border-t border-slate-100 text-xs text-slate-400">
-          At current position
+          Live delay at current position
         </div>
       </div>
 
@@ -73,15 +80,22 @@ export const CurrentStateCard = ({
           <ArrowRight className="w-4 h-4 text-slate-400" />
         </div>
         <div>
-          <div className="text-2xl font-bold text-slate-900 tracking-tight">
-            {nextStationCode || "---"}
+          <div className="flex items-baseline gap-2 flex-wrap">
+            <span className="text-xl font-extrabold text-slate-900 tracking-tight">
+              {nextStationName || nextStationCode || "---"}
+            </span>
+            {nextStationCode && (
+              <span className="px-2 py-0.5 rounded text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200">
+                {nextStationCode}
+              </span>
+            )}
           </div>
-          <div className="text-sm font-medium text-slate-600 truncate mt-0.5">
-            {nextStationName || "Next Stop"}
+          <div className="text-xs font-medium text-slate-500 mt-1">
+            Next unreached forecast target
           </div>
         </div>
         <div className="mt-3 pt-2 border-t border-slate-100 text-xs text-slate-400">
-          Next unreached forecast target
+          Upcoming stop on route
         </div>
       </div>
 
@@ -95,12 +109,12 @@ export const CurrentStateCard = ({
           <div className="text-2xl font-bold text-blue-900 tracking-tight">
             {predictedDestinationEta || "--:--"}
           </div>
-          <div className="text-sm font-medium text-slate-600 truncate mt-0.5">
+          <div className="text-xs font-medium text-slate-600 mt-1">
             {destinationName || "Destination"} ({destinationCode})
           </div>
         </div>
         <div className="mt-3 pt-2 border-t border-slate-100 text-xs text-slate-400">
-          Sch: <span className="font-semibold text-slate-600">{scheduledDestinationEta || "--:--"}</span>
+          Sch: <span className="font-semibold text-slate-600">{scheduledDestinationEta || "--:--"}</span> (XGBoost Estimated)
         </div>
       </div>
     </div>
