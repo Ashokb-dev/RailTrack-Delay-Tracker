@@ -239,7 +239,7 @@ app.post("/search-trains", async (req, res) => {
       return res.status(400).json({ error: "from and to are required" });
     }
 
-    const url = `https://api.railradar.in/v1/trains/between/${from}/${to}?apiKey=${API_KEY}`;
+    const url = `https://api.railradar.in/v1/trains/between/${from}/${to}?live=true`;
     const response = await axios.get(url, {
       headers: { Authorization: `Bearer ${API_KEY}` }
     });

@@ -45,11 +45,13 @@ export function transformPredictionResponse(backendData, trainInfo = {}, routeIn
   const currentStationObj = liveLocation && (liveLocation.stationName || liveLocation.name)
     ? {
         code: liveLocation.stationCode || liveLocation.code || "---",
-        name: liveLocation.stationName || liveLocation.name || "Live Location"
+        name: liveLocation.stationName || liveLocation.name || "Live Location",
+        sequence: liveLocation.sequence ?? null
       }
     : (stations[0] || {
         code: routeInfo.from || "MYS",
-        name: routeInfo.from || "Mysuru Jn"
+        name: routeInfo.from || "Mysuru Jn",
+        sequence: null
       });
 
   // Authoritative Current Live Delay directly from RailRadar API
@@ -68,12 +70,23 @@ export function transformPredictionResponse(backendData, trainInfo = {}, routeIn
         name: routeInfo.to || "KSR Bengaluru"
       });
 
-  // Find exact index of current station in stations array for RouteProgress
-  let currentStationIdx = stations.findIndex(s => s.code === currentStationObj.code);
-  if (currentStationIdx === -1 && backendData?.previous_halt?.stationCode) {
+  // Find exact route index matching live sequence or stationCode (Requirement 19)
+  const liveSequence = liveLocation?.sequence;
+  let currentStationIdx = -1;
+
+  if (liveSequence != null) {
+    currentStationIdx = stations.findIndex(s => s.sequence === liveSequence);
+  }
+
+  if (currentStationIdx < 0 && currentStationObj.code) {
+    currentStationIdx = stations.findIndex(s => s.code === currentStationObj.code);
+  }
+
+  if (currentStationIdx < 0 && backendData?.previous_halt?.stationCode) {
     currentStationIdx = stations.findIndex(s => s.code === backendData.previous_halt.stationCode);
   }
-  if (currentStationIdx === -1) {
+
+  if (currentStationIdx < 0) {
     currentStationIdx = 0;
   }
 

@@ -5,15 +5,19 @@ import { cn } from '../utils/cn';
 export const RouteProgress = ({
   stations = [],
   currentStationCode,
+  currentStationSequence,
   selectedStationCode,
   onSelectStation,
   className
 }) => {
   if (!stations || stations.length === 0) return null;
 
-  // Identify current station index strictly from live currentStationCode
+  // Identify current station index strictly from live currentStationSequence or currentStationCode
   let currentIdx = -1;
-  if (currentStationCode) {
+  if (currentStationSequence != null) {
+    currentIdx = stations.findIndex(st => st.sequence === currentStationSequence);
+  }
+  if (currentIdx === -1 && currentStationCode) {
     currentIdx = stations.findIndex(st => st.code === currentStationCode);
   }
   if (currentIdx === -1) {
