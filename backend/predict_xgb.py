@@ -54,10 +54,15 @@ for index, station in enumerate(stations):
         "00:00"
     )
 
-    hh, mm = map(
-        int,
-        scheduled_time.split(":")
-    )
+    if not scheduled_time or ":" not in scheduled_time or "--" in scheduled_time:
+        scheduled_time = "00:00"
+
+    try:
+        parts = scheduled_time.split(":")
+        hh, mm = int(parts[0]), int(parts[1])
+    except Exception:
+        hh, mm = 0, 0
+        scheduled_time = "00:00"
 
     # ======================================
     # REAL STATIONS
