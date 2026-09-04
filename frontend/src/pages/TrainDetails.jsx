@@ -67,6 +67,9 @@ export default function TrainDetails() {
   };
 
   useEffect(() => {
+    setTelemetry(null);
+    setSelectedStation(null);
+    setLoading(true);
     fetchPrediction();
   }, [trainNo]);
 

@@ -38,19 +38,27 @@ export function transformPredictionResponse(backendData, trainInfo = {}, routeIn
   });
 
   // 2. Identify Current Station Index & Partition
-  // Current station index is the index of the last observed station, or index 0 if not yet started
-  let currentStationIdx = 0;
-  let hasObservedStation = false;
-  for (let i = 0; i < stations.length; i++) {
-    if (stations[i].isObserved) {
-      currentStationIdx = i;
-      hasObservedStation = true;
+  const liveLocation = backendData?.current_location;
+  const liveNextHalt = backendData?.next_halt;
+
+  let currentStationIdx = -1;
+
+  if (liveLocation && (liveLocation.stationCode || liveLocation.code)) {
+    const codeToMatch = liveLocation.stationCode || liveLocation.code;
+    currentStationIdx = stations.findIndex(s => s.code === codeToMatch);
+  }
+
+  if (currentStationIdx === -1) {
+    for (let i = 0; i < stations.length; i++) {
+      if (stations[i].isObserved) {
+        currentStationIdx = i;
+      }
     }
   }
 
-  // Check if live telemetry current_location is passed directly from RailRadar API
-  const liveLocation = backendData?.current_location;
-  const liveNextHalt = backendData?.next_halt;
+  if (currentStationIdx === -1) {
+    currentStationIdx = 0;
+  }
 
   const currentStationObj = liveLocation
     ? {
@@ -58,9 +66,7 @@ export function transformPredictionResponse(backendData, trainInfo = {}, routeIn
         name: liveLocation.stationName || liveLocation.name || stations[currentStationIdx]?.name || routeInfo.from || "Mysuru Jn",
         actualDelayMinutes: backendData?.live_delay_minutes ?? liveLocation.delayMinutes ?? stations[currentStationIdx]?.actualDelayMinutes ?? 0
       }
-    : (hasObservedStation && stations[currentStationIdx])
-    ? stations[currentStationIdx]
-    : (stations[0] || {
+    : (stations[currentStationIdx] || {
         code: routeInfo.from || "MYS",
         name: routeInfo.from || "Mysuru Jn",
         actualDelayMinutes: 0

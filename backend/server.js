@@ -46,7 +46,7 @@ app.post("/predict-future-stations", async (req, res) => {
     // LIVE TRAIN API
     // ======================================
 
-    let liveUrl = `https://api.railradar.in/v1/trains/${trainNumber}/live?apiKey=${API_KEY}`;
+    let liveUrl = `https://api.railradar.in/v1/trains/${trainNumber}/live`;
     console.log("Fetching live train running status:", liveUrl);
 
     let liveData = null;
@@ -56,6 +56,7 @@ app.post("/predict-future-stations", async (req, res) => {
       });
       liveData = response.data;
     } catch (liveErr) {
+      console.log("Live endpoint error:", liveErr.response?.status, liveErr.response?.data || liveErr.message);
       console.log("Live endpoint fallback to timetable route endpoint...");
       const fallbackUrl = `https://api.railradar.in/v1/trains/${trainNumber}?journeyDate=${journeyDate}&dataType=live&apiKey=${API_KEY}`;
       const response = await axios.get(fallbackUrl, {

@@ -12,11 +12,19 @@ export const RouteProgress = ({
   if (!stations || stations.length === 0) return null;
 
   // Identify current station index
-  let currentIdx = 0;
-  for (let i = 0; i < stations.length; i++) {
-    if (stations[i].isObserved || (currentStationCode && stations[i].code === currentStationCode)) {
-      currentIdx = i;
+  let currentIdx = -1;
+  if (currentStationCode) {
+    currentIdx = stations.findIndex(st => st.code === currentStationCode);
+  }
+  if (currentIdx === -1) {
+    for (let i = 0; i < stations.length; i++) {
+      if (stations[i].isObserved) {
+        currentIdx = i;
+      }
     }
+  }
+  if (currentIdx === -1) {
+    currentIdx = 0;
   }
 
   return (
