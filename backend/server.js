@@ -75,19 +75,7 @@ app.post("/predict-future-stations", async (req, res) => {
       ? dataObj.delayMinutes
       : (typeof currentLocation?.delayMinutes === "number" ? currentLocation.delayMinutes : null);
 
-    // ======================================
-    // FILTER ROUTE
-    // ======================================
-
-    if (from && to) {
-      const startIndex = routeStations.findIndex((s) => (s.station?.code || s.stationCode || s.code) === from);
-      const endIndex = routeStations.findIndex((s) => (s.station?.code || s.stationCode || s.code) === to);
-
-      if (startIndex !== -1 && endIndex !== -1 && startIndex <= endIndex) {
-        routeStations = routeStations.slice(startIndex, endIndex + 1);
-      }
-    }
-
+    // Preserve full train route so actual live location is never sliced out
     console.log("Total route stations:", routeStations.length);
 
     // ======================================
