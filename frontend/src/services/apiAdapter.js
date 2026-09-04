@@ -41,56 +41,45 @@ export function transformPredictionResponse(backendData, trainInfo = {}, routeIn
   const liveLocation = backendData?.current_location;
   const liveNextHalt = backendData?.next_halt;
 
-  let currentStationIdx = -1;
-
-  if (liveLocation && (liveLocation.stationCode || liveLocation.code)) {
-    const codeToMatch = liveLocation.stationCode || liveLocation.code;
-    currentStationIdx = stations.findIndex(s => s.code === codeToMatch);
-  }
-
-  if (currentStationIdx === -1) {
-    for (let i = 0; i < stations.length; i++) {
-      if (stations[i].isObserved) {
-        currentStationIdx = i;
-      }
-    }
-  }
-
-  if (currentStationIdx === -1) {
-    currentStationIdx = 0;
-  }
-
-  const currentStationObj = liveLocation
+  // Authoritative Current Station directly from RailRadar API
+  const currentStationObj = liveLocation && (liveLocation.stationName || liveLocation.name)
     ? {
-        code: liveLocation.stationCode || liveLocation.code || stations[currentStationIdx]?.code || routeInfo.from || "MYS",
-        name: liveLocation.stationName || liveLocation.name || stations[currentStationIdx]?.name || routeInfo.from || "Mysuru Jn",
-        actualDelayMinutes: backendData?.live_delay_minutes ?? liveLocation.delayMinutes ?? stations[currentStationIdx]?.actualDelayMinutes ?? 0
+        code: liveLocation.stationCode || liveLocation.code || "---",
+        name: liveLocation.stationName || liveLocation.name || "Live Location"
       }
-    : (stations[currentStationIdx] || {
+    : (stations[0] || {
         code: routeInfo.from || "MYS",
-        name: routeInfo.from || "Mysuru Jn",
-        actualDelayMinutes: 0
+        name: routeInfo.from || "Mysuru Jn"
       });
 
+  // Authoritative Current Live Delay directly from RailRadar API
   const currentDelayMinutes = typeof backendData?.live_delay_minutes === "number"
     ? backendData.live_delay_minutes
-    : (currentStationObj.actualDelayMinutes ?? 0);
+    : (typeof liveLocation?.delayMinutes === "number" ? liveLocation.delayMinutes : 0);
 
-  // Passed stations: index 0 to currentStationIdx - 1
-  const passedStations = stations.slice(0, currentStationIdx);
-
-  // Future Forecast Stations: STRICTLY stations AFTER currentStationIdx (index currentStationIdx + 1 to end)
-  const futureForecastStations = stations.slice(currentStationIdx + 1);
-
-  // Next station: Use liveNextHalt from RailRadar API if available, otherwise first station in futureForecastStations
-  const nextStationObj = liveNextHalt
+  // Authoritative Next Station directly from RailRadar API
+  const nextStationObj = liveNextHalt && (liveNextHalt.stationName || liveNextHalt.name)
     ? {
         code: liveNextHalt.stationCode || liveNextHalt.code || "---",
         name: liveNextHalt.stationName || liveNextHalt.name || "Next Station"
       }
-    : futureForecastStations.length > 0
-    ? futureForecastStations[0]
-    : (stations[stations.length - 1] || { code: routeInfo.to || "SBC", name: routeInfo.to || "KSR Bengaluru" });
+    : (stations.length > 1 ? stations[1] : {
+        code: routeInfo.to || "SBC",
+        name: routeInfo.to || "KSR Bengaluru"
+      });
+
+  // Find exact index of current station in stations array for RouteProgress
+  let currentStationIdx = stations.findIndex(s => s.code === currentStationObj.code);
+  if (currentStationIdx === -1 && backendData?.previous_halt?.stationCode) {
+    currentStationIdx = stations.findIndex(s => s.code === backendData.previous_halt.stationCode);
+  }
+  if (currentStationIdx === -1) {
+    currentStationIdx = 0;
+  }
+
+  // Passed stations & Future Forecast stations
+  const passedStations = stations.slice(0, currentStationIdx);
+  const futureForecastStations = stations.slice(currentStationIdx + 1);
 
   // Destination station: Last station on the route
   const lastStation = stations[stations.length - 1] || {};

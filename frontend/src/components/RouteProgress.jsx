@@ -11,17 +11,10 @@ export const RouteProgress = ({
 }) => {
   if (!stations || stations.length === 0) return null;
 
-  // Identify current station index
+  // Identify current station index strictly from live currentStationCode
   let currentIdx = -1;
   if (currentStationCode) {
     currentIdx = stations.findIndex(st => st.code === currentStationCode);
-  }
-  if (currentIdx === -1) {
-    for (let i = 0; i < stations.length; i++) {
-      if (stations[i].isObserved) {
-        currentIdx = i;
-      }
-    }
   }
   if (currentIdx === -1) {
     currentIdx = 0;
@@ -71,7 +64,7 @@ export const RouteProgress = ({
 
             return (
               <button
-                key={st.code || index}
+                key={`${st.code}-${st.sequence || index}`}
                 type="button"
                 onClick={() => onSelectStation && onSelectStation(st)}
                 className={cn(
