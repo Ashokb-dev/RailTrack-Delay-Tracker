@@ -6,6 +6,7 @@ const axios = require("axios");
 const { exec } = require("child_process");
 const fs = require("fs");
 const path = require("path");
+const evaluator = require("./evaluator");
 
 const app = express();
 
@@ -310,6 +311,15 @@ app.post("/predict-future-stations", async (req, res) => {
 
       try {
         const result = JSON.parse(stdout);
+        
+        // Phase 6 Observation Logger & Matcher Hooks
+        try {
+          evaluator.recordForecastSnapshot(result, { trainNumber, journeyDate }, { from, to });
+          evaluator.recordActualOutcomes(stations, { trainNumber, journeyDate });
+        } catch (evalErr) {
+          console.error("Evaluator logging error:", evalErr.message);
+        }
+
         res.json(result);
       } catch (err) {
         console.error("JSON parse error:", err.message);
