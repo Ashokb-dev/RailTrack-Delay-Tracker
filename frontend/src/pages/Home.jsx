@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
-import { Search, MapPin, Calendar, ArrowRight, Train, Activity, AlertCircle } from 'lucide-react';
+import { Search, MapPin, Calendar, ArrowRight, Train, Activity, AlertCircle, X } from 'lucide-react';
 import Header from '../components/Header';
 import TrainCard from '../components/TrainCard';
 
@@ -21,6 +21,28 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+
+  // Active Train Search State
+  const [showActiveSearch, setShowActiveSearch] = useState(false);
+  const [activeSearchQuery, setActiveSearchQuery] = useState("");
+
+  const filteredTrains = useMemo(() => {
+    if (!activeSearchQuery || !activeSearchQuery.trim()) {
+      return trains;
+    }
+    const query = activeSearchQuery.trim().toLowerCase();
+    return trains.filter((t) => {
+      const numMatch = t.trainNumber ? String(t.trainNumber).toLowerCase().includes(query) : false;
+      const nameMatch = t.trainName ? String(t.trainName).toLowerCase().includes(query) : false;
+      const fromMatch = t.from ? String(t.from).toLowerCase().includes(query) : false;
+      const toMatch = t.to ? String(t.to).toLowerCase().includes(query) : false;
+      const fromNameMatch = t.fromName ? String(t.fromName).toLowerCase().includes(query) : false;
+      const toNameMatch = t.toName ? String(t.toName).toLowerCase().includes(query) : false;
+      const serviceMatch = t.serviceType ? String(t.serviceType).toLowerCase().includes(query) : false;
+
+      return numMatch || nameMatch || fromMatch || toMatch || fromNameMatch || toNameMatch || serviceMatch;
+    });
+  }, [trains, activeSearchQuery]);
 
   // Autocomplete Suggestions
   const [fromSuggestions, setFromSuggestions] = useState([]);
@@ -291,14 +313,59 @@ export default function Home() {
         {/* Search Results Section */}
         {hasSearched && (
           <section className="space-y-4">
-            <div className="flex items-center justify-between">
+            {/* Search Input directly ABOVE "Active Trains Available" section */}
+            {showActiveSearch && (
+              <div className="relative max-w-md">
+                <label htmlFor="active-train-search-input" className="sr-only">
+                  Search active trains by number, code, or name
+                </label>
+                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                  <Search className="h-4 w-4 text-slate-400" />
+                </div>
+                <input
+                  id="active-train-search-input"
+                  type="text"
+                  value={activeSearchQuery}
+                  onChange={(e) => setActiveSearchQuery(e.target.value)}
+                  placeholder="Search train by number, code, or name..."
+                  aria-label="Search active trains by number, code, or name"
+                  className="w-full bg-white border border-slate-300 rounded-xl p-3 pl-10 pr-8 text-xs font-semibold text-slate-900 placeholder:text-slate-400 outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 transition-all shadow-xs"
+                />
+                {activeSearchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setActiveSearchQuery('')}
+                    aria-label="Clear active train search"
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                )}
+              </div>
+            )}
+
+            <div className="flex items-center justify-between flex-wrap gap-2">
               <h2 className="text-xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
                 <Train className="w-5 h-5 text-blue-600" />
-                <span>Active Trains Available ({trains.length})</span>
+                <span>Active Trains Available ({filteredTrains.length})</span>
               </h2>
-              <span className="text-xs text-slate-500 font-semibold">
-                Live Data Source: RailRadar API
-              </span>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowActiveSearch(!showActiveSearch);
+                    if (showActiveSearch) setActiveSearchQuery('');
+                  }}
+                  className="px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 transition-colors flex items-center gap-1.5 text-xs font-bold shadow-2xs cursor-pointer"
+                  aria-label="Toggle active train search"
+                >
+                  <Search className="w-3.5 h-3.5 text-blue-600" />
+                  <span>{showActiveSearch ? "Close Search" : "Search"}</span>
+                </button>
+                <span className="text-xs text-slate-500 font-semibold hidden sm:inline">
+                  Live Data Source: RailRadar API
+                </span>
+              </div>
             </div>
 
             {loading ? (
@@ -314,9 +381,17 @@ export default function Home() {
                   No active direct trains were returned for route {from} ➔ {to}. Try another date or station pair.
                 </p>
               </div>
+            ) : filteredTrains.length === 0 ? (
+              <div className="bg-white border border-slate-200 rounded-3xl p-12 text-center space-y-2">
+                <Train className="w-12 h-12 text-slate-300 mx-auto" />
+                <h3 className="text-lg font-bold text-slate-800">No Trains Found</h3>
+                <p className="text-xs text-slate-500 max-w-md mx-auto">
+                  No active trains match "<span className="font-medium text-slate-800">{activeSearchQuery}</span>". Try searching by another train number, code, or name.
+                </p>
+              </div>
             ) : (
               <div className="grid grid-cols-1 gap-4">
-                {trains.map((trainItem, index) => (
+                {filteredTrains.map((trainItem, index) => (
                   <TrainCard
                     key={index}
                     train={trainItem}

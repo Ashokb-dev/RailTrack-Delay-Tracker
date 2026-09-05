@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import axios from 'axios';
 import { ArrowLeft, ArrowRight, RotateCcw, AlertTriangle } from 'lucide-react';
@@ -22,17 +22,51 @@ export default function TrainDetails() {
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [refreshError, setRefreshError] = useState("");
   const [telemetry, setTelemetry] = useState(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [selectedStation, setSelectedStation] = useState(null);
 
-  const fetchPrediction = async () => {
+  const isFetchingRef = useRef(false);
+  const isMountedRef = useRef(true);
+  const requestIdRef = useRef(0);
+  const abortControllerRef = useRef(null);
+  const telemetryRef = useRef(null);
+
+  const updateTelemetry = (data) => {
+    telemetryRef.current = data;
+    setTelemetry(data);
+  };
+
+  const fetchPrediction = useCallback(async (isManual = false, isInitial = false) => {
+    if (isFetchingRef.current) return;
+    isFetchingRef.current = true;
+
+    const currentRequestId = ++requestIdRef.current;
+
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    abortControllerRef.current = new AbortController();
+
+    if (isManual) {
+      setIsRefreshing(true);
+    }
+    if (isInitial && !telemetryRef.current) {
+      setLoading(true);
+    }
+
     try {
-      setError("");
       const targetTrainNumber = trainNo || train?.trainNumber;
       if (!targetTrainNumber) {
-        setError("No train number provided.");
-        setLoading(false);
+        if (isMountedRef.current && currentRequestId === requestIdRef.current) {
+          if (!telemetryRef.current) {
+            setError("No train number provided.");
+          } else {
+            setRefreshError("No train number provided.");
+          }
+          setLoading(false);
+        }
         return;
       }
 
@@ -47,6 +81,9 @@ export default function TrainDetails() {
           from: from || train?.from,
           to: to || train?.to,
           searchMode
+        },
+        {
+          signal: abortControllerRef.current.signal
         }
       );
 
@@ -56,26 +93,59 @@ export default function TrainDetails() {
         { from: from || train?.from, to: to || train?.to }
       );
 
-      setTelemetry(transformed);
+      if (isMountedRef.current && currentRequestId === requestIdRef.current) {
+        updateTelemetry(transformed);
+        setError("");
+        setRefreshError("");
+      }
     } catch (err) {
+      if (axios.isCancel(err) || err.name === 'CanceledError' || err.name === 'AbortError') {
+        return;
+      }
       console.error("Error fetching prediction:", err);
-      setError(err.response?.data?.error || "Failed to fetch live train data or XGBoost predictions.");
+      if (isMountedRef.current && currentRequestId === requestIdRef.current) {
+        const errMsg = err.response?.data?.error || err.response?.data?.details || "Failed to fetch live train data or XGBoost predictions.";
+        if (telemetryRef.current === null) {
+          setError(errMsg);
+        } else {
+          setRefreshError(`Live update warning: ${errMsg}`);
+        }
+      }
     } finally {
-      setLoading(false);
-      setIsRefreshing(false);
+      if (isMountedRef.current && currentRequestId === requestIdRef.current) {
+        setLoading(false);
+        setIsRefreshing(false);
+      }
+      isFetchingRef.current = false;
     }
-  };
+  }, [trainNo, train, journeyDate, from, to, searchMode, API_URL]);
 
   useEffect(() => {
+    isMountedRef.current = true;
+    telemetryRef.current = null;
     setTelemetry(null);
     setSelectedStation(null);
+    setError("");
+    setRefreshError("");
     setLoading(true);
-    fetchPrediction();
-  }, [trainNo]);
+
+    fetchPrediction(false, true);
+
+    const intervalId = setInterval(() => {
+      fetchPrediction(false, false);
+    }, 30000);
+
+    return () => {
+      isMountedRef.current = false;
+      clearInterval(intervalId);
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, [trainNo, fetchPrediction]);
 
   const handleRefresh = () => {
-    setIsRefreshing(true);
-    fetchPrediction();
+    fetchPrediction(true, false);
   };
 
   return (
@@ -101,7 +171,7 @@ export default function TrainDetails() {
             <h3 className="text-lg font-bold text-slate-800">Loading Train Intelligence Dashboard...</h3>
             <p className="text-xs text-slate-500">Querying live RailRadar route data & running XGBoost delay models...</p>
           </div>
-        ) : error ? (
+        ) : error && !telemetry ? (
           <div className="bg-red-50 border border-red-200 text-red-700 p-6 rounded-3xl space-y-3">
             <div className="flex items-center gap-3">
               <AlertTriangle className="w-6 h-6 text-red-600 shrink-0" />
@@ -110,7 +180,7 @@ export default function TrainDetails() {
             <p className="text-sm font-semibold">{error}</p>
             <button
               type="button"
-              onClick={fetchPrediction}
+              onClick={() => fetchPrediction(true, true)}
               className="px-4 py-2 bg-red-600 text-white rounded-xl font-bold text-xs hover:bg-red-700 transition-colors cursor-pointer"
             >
               Retry Prediction Request
@@ -118,6 +188,23 @@ export default function TrainDetails() {
           </div>
         ) : telemetry ? (
           <div className="space-y-6">
+            {/* Non-destructive background refresh warning banner */}
+            {refreshError && (
+              <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs font-semibold flex items-center justify-between gap-3 shadow-2xs">
+                <div className="flex items-center gap-2.5">
+                  <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+                  <span>{refreshError} — Showing last known valid telemetry.</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleRefresh}
+                  disabled={isRefreshing}
+                  className="px-2.5 py-1 bg-amber-100 hover:bg-amber-200 text-amber-900 rounded-lg font-bold text-xs transition-colors shrink-0 cursor-pointer disabled:opacity-50"
+                >
+                  {isRefreshing ? "Updating..." : "Retry Now"}
+                </button>
+              </div>
+            )}
             {/* 1. TRAIN HEADER */}
             <div
               id="dashboard-header"
@@ -170,10 +257,7 @@ export default function TrainDetails() {
               currentDelayMinutes={telemetry.currentDelayMinutes}
               nextStationCode={telemetry.nextStation.code}
               nextStationName={telemetry.nextStation.name}
-              predictedDestinationEta={telemetry.predictedDestinationEta}
-              scheduledDestinationEta={telemetry.scheduledDestinationEta}
-              destinationCode={telemetry.destination.code}
-              destinationName={telemetry.destination.name}
+              nextStationDelayMinutes={telemetry.arrivalForecast?.nextStopForecast?.delayExpected ?? telemetry.nextStation?.delayExpected}
             />
 
             {/* 4. ROUTE PROGRESS */}

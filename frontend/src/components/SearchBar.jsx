@@ -15,7 +15,7 @@ export default function SearchBar({
 
   return (
 
-    <div className="bg-white rounded-3xl border shadow-sm p-6">
+    <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6">
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
 

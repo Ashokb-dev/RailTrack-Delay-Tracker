@@ -1,0 +1,507 @@
+{
+  "global_mean": -0.47,
+  "global_median": 0.0,
+  "segment_count": 100,
+  "segments": {
+    "AK|AK": {
+      "mean": -1.46,
+      "median": 0.0,
+      "count": 13
+    },
+    "AK|AMI": {
+      "mean": 0.0,
+      "median": 0.0,
+      "count": 5
+    },
+    "AK|BPL": {
+      "mean": 1.0,
+      "median": 1.0,
+      "count": 11
+    },
+    "AK|BSL": {
+      "mean": 0.62,
+      "median": 1.0,
+      "count": 13
+    },
+    "AK|HDP": {
+      "mean": 1.83,
+      "median": 0.5,
+      "count": 6
+    },
+    "AK|JP": {
+      "mean": 2.17,
+      "median": 1.0,
+      "count": 6
+    },
+    "AK|MAS": {
+      "mean": -0.3,
+      "median": -1.0,
+      "count": 10
+    },
+    "AK|MUMBAI": {
+      "mean": -0.67,
+      "median": 0.0,
+      "count": 9
+    },
+    "AK|NGP": {
+      "mean": 0.0,
+      "median": 0.0,
+      "count": 9
+    },
+    "AK|PUNE": {
+      "mean": 2.67,
+      "median": 0.5,
+      "count": 12
+    },
+    "AMI|AK": {
+      "mean": -0.14,
+      "median": 0.0,
+      "count": 7
+    },
+    "AMI|AMI": {
+      "mean": -2.42,
+      "median": -2.0,
+      "count": 19
+    },
+    "AMI|BPL": {
+      "mean": -0.67,
+      "median": -0.5,
+      "count": 12
+    },
+    "AMI|BSL": {
+      "mean": -1.92,
+      "median": 0.0,
+      "count": 13
+    },
+    "AMI|HDP": {
+      "mean": 1.33,
+      "median": 0.0,
+      "count": 3
+    },
+    "AMI|JP": {
+      "mean": 0.86,
+      "median": 0.0,
+      "count": 14
+    },
+    "AMI|MAS": {
+      "mean": -2.14,
+      "median": 0.0,
+      "count": 7
+    },
+    "AMI|MUMBAI": {
+      "mean": 0.44,
+      "median": 0.0,
+      "count": 16
+    },
+    "AMI|NGP": {
+      "mean": -3.33,
+      "median": -3.0,
+      "count": 9
+    },
+    "AMI|PUNE": {
+      "mean": -1.82,
+      "median": 0.0,
+      "count": 11
+    },
+    "BPL|AK": {
+      "mean": 0.08,
+      "median": -1.0,
+      "count": 12
+    },
+    "BPL|AMI": {
+      "mean": -0.62,
+      "median": 0.0,
+      "count": 8
+    },
+    "BPL|BPL": {
+      "mean": -1.1,
+      "median": -2.0,
+      "count": 10
+    },
+    "BPL|BSL": {
+      "mean": -1.7,
+      "median": -0.5,
+      "count": 10
+    },
+    "BPL|HDP": {
+      "mean": 0.43,
+      "median": 1.0,
+      "count": 7
+    },
+    "BPL|JP": {
+      "mean": -1.29,
+      "median": 0.0,
+      "count": 7
+    },
+    "BPL|MAS": {
+      "mean": -2.08,
+      "median": 0.0,
+      "count": 13
+    },
+    "BPL|MUMBAI": {
+      "mean": 0.5,
+      "median": 1.0,
+      "count": 6
+    },
+    "BPL|NGP": {
+      "mean": -0.88,
+      "median": 0.0,
+      "count": 8
+    },
+    "BPL|PUNE": {
+      "mean": -2.12,
+      "median": -1.5,
+      "count": 8
+    },
+    "BSL|AK": {
+      "mean": -0.29,
+      "median": 0.0,
+      "count": 7
+    },
+    "BSL|AMI": {
+      "mean": 0.77,
+      "median": 0.0,
+      "count": 13
+    },
+    "BSL|BPL": {
+      "mean": -0.22,
+      "median": 0.0,
+      "count": 9
+    },
+    "BSL|BSL": {
+      "mean": -4.23,
+      "median": -2.0,
+      "count": 13
+    },
+    "BSL|HDP": {
+      "mean": 0.65,
+      "median": 0.0,
+      "count": 17
+    },
+    "BSL|JP": {
+      "mean": -0.4,
+      "median": 0.0,
+      "count": 10
+    },
+    "BSL|MAS": {
+      "mean": -3.12,
+      "median": -2.5,
+      "count": 8
+    },
+    "BSL|MUMBAI": {
+      "mean": -2.17,
+      "median": -1.0,
+      "count": 6
+    },
+    "BSL|NGP": {
+      "mean": 0.36,
+      "median": -0.5,
+      "count": 14
+    },
+    "BSL|PUNE": {
+      "mean": -0.25,
+      "median": -1.5,
+      "count": 4
+    },
+    "HDP|AK": {
+      "mean": -0.11,
+      "median": 0.0,
+      "count": 9
+    },
+    "HDP|AMI": {
+      "mean": -0.9,
+      "median": -1.0,
+      "count": 10
+    },
+    "HDP|BPL": {
+      "mean": -1.2,
+      "median": 0.0,
+      "count": 10
+    },
+    "HDP|BSL": {
+      "mean": 1.21,
+      "median": 1.5,
+      "count": 14
+    },
+    "HDP|HDP": {
+      "mean": -2.0,
+      "median": -2.0,
+      "count": 16
+    },
+    "HDP|JP": {
+      "mean": -1.27,
+      "median": -1.0,
+      "count": 11
+    },
+    "HDP|MAS": {
+      "mean": 1.8,
+      "median": 4.5,
+      "count": 10
+    },
+    "HDP|MUMBAI": {
+      "mean": -2.25,
+      "median": -1.5,
+      "count": 12
+    },
+    "HDP|NGP": {
+      "mean": 2.2,
+      "median": 1.0,
+      "count": 10
+    },
+    "HDP|PUNE": {
+      "mean": -3.5,
+      "median": -2.5,
+      "count": 4
+    },
+    "JP|AK": {
+      "mean": 1.5,
+      "median": 0.5,
+      "count": 8
+    },
+    "JP|AMI": {
+      "mean": -0.43,
+      "median": 0.0,
+      "count": 14
+    },
+    "JP|BPL": {
+      "mean": 0.0,
+      "median": -1.0,
+      "count": 8
+    },
+    "JP|BSL": {
+      "mean": -1.75,
+      "median": -1.0,
+      "count": 4
+    },
+    "JP|HDP": {
+      "mean": 0.73,
+      "median": 0.0,
+      "count": 11
+    },
+    "JP|JP": {
+      "mean": -1.46,
+      "median": 0.0,
+      "count": 13
+    },
+    "JP|MAS": {
+      "mean": -0.44,
+      "median": 0.0,
+      "count": 9
+    },
+    "JP|MUMBAI": {
+      "mean": -1.31,
+      "median": -2.0,
+      "count": 16
+    },
+    "JP|NGP": {
+      "mean": 0.0,
+      "median": 0.0,
+      "count": 12
+    },
+    "JP|PUNE": {
+      "mean": -3.7,
+      "median": -1.5,
+      "count": 10
+    },
+    "MAS|AK": {
+      "mean": 0.83,
+      "median": 0.0,
+      "count": 12
+    },
+    "MAS|AMI": {
+      "mean": 3.43,
+      "median": 2.0,
+      "count": 7
+    },
+    "MAS|BPL": {
+      "mean": 1.0,
+      "median": 0.0,
+      "count": 6
+    },
+    "MAS|BSL": {
+      "mean": 2.83,
+      "median": 2.0,
+      "count": 12
+    },
+    "MAS|HDP": {
+      "mean": 0.55,
+      "median": 0.0,
+      "count": 11
+    },
+    "MAS|JP": {
+      "mean": -0.36,
+      "median": 0.0,
+      "count": 14
+    },
+    "MAS|MAS": {
+      "mean": -2.29,
+      "median": 0.0,
+      "count": 21
+    },
+    "MAS|MUMBAI": {
+      "mean": 1.25,
+      "median": 2.0,
+      "count": 8
+    },
+    "MAS|NGP": {
+      "mean": 0.88,
+      "median": 0.0,
+      "count": 8
+    },
+    "MAS|PUNE": {
+      "mean": 2.33,
+      "median": 1.0,
+      "count": 9
+    },
+    "MUMBAI|AK": {
+      "mean": 0.07,
+      "median": 0.0,
+      "count": 14
+    },
+    "MUMBAI|AMI": {
+      "mean": 0.86,
+      "median": 2.0,
+      "count": 14
+    },
+    "MUMBAI|BPL": {
+      "mean": -1.0,
+      "median": 0.0,
+      "count": 12
+    },
+    "MUMBAI|BSL": {
+      "mean": -1.0,
+      "median": -1.0,
+      "count": 11
+    },
+    "MUMBAI|HDP": {
+      "mean": -0.09,
+      "median": 0.0,
+      "count": 11
+    },
+    "MUMBAI|JP": {
+      "mean": -1.14,
+      "median": -1.0,
+      "count": 7
+    },
+    "MUMBAI|MAS": {
+      "mean": -0.12,
+      "median": 0.0,
+      "count": 8
+    },
+    "MUMBAI|MUMBAI": {
+      "mean": -0.68,
+      "median": 0.0,
+      "count": 25
+    },
+    "MUMBAI|NGP": {
+      "mean": -0.56,
+      "median": 0.0,
+      "count": 16
+    },
+    "MUMBAI|PUNE": {
+      "mean": 0.11,
+      "median": 0.0,
+      "count": 9
+    },
+    "NGP|AK": {
+      "mean": -0.8,
+      "median": 0.0,
+      "count": 5
+    },
+    "NGP|AMI": {
+      "mean": -1.4,
+      "median": -1.0,
+      "count": 10
+    },
+    "NGP|BPL": {
+      "mean": 1.45,
+      "median": 0.0,
+      "count": 11
+    },
+    "NGP|BSL": {
+      "mean": -0.36,
+      "median": 0.0,
+      "count": 11
+    },
+    "NGP|HDP": {
+      "mean": -1.5,
+      "median": -2.0,
+      "count": 12
+    },
+    "NGP|JP": {
+      "mean": 0.93,
+      "median": 0.0,
+      "count": 14
+    },
+    "NGP|MAS": {
+      "mean": -0.6,
+      "median": 0.0,
+      "count": 10
+    },
+    "NGP|MUMBAI": {
+      "mean": -2.0,
+      "median": -2.0,
+      "count": 2
+    },
+    "NGP|NGP": {
+      "mean": -3.73,
+      "median": -3.0,
+      "count": 11
+    },
+    "NGP|PUNE": {
+      "mean": -0.42,
+      "median": 0.0,
+      "count": 12
+    },
+    "PUNE|AK": {
+      "mean": -2.8,
+      "median": -1.0,
+      "count": 5
+    },
+    "PUNE|AMI": {
+      "mean": -0.44,
+      "median": -1.0,
+      "count": 9
+    },
+    "PUNE|BPL": {
+      "mean": 0.29,
+      "median": 0.0,
+      "count": 7
+    },
+    "PUNE|BSL": {
+      "mean": -1.14,
+      "median": 0.0,
+      "count": 7
+    },
+    "PUNE|HDP": {
+      "mean": 0.82,
+      "median": 0.0,
+      "count": 11
+    },
+    "PUNE|JP": {
+      "mean": -0.62,
+      "median": -1.5,
+      "count": 8
+    },
+    "PUNE|MAS": {
+      "mean": 0.14,
+      "median": 0.0,
+      "count": 7
+    },
+    "PUNE|MUMBAI": {
+      "mean": -1.31,
+      "median": 0.0,
+      "count": 13
+    },
+    "PUNE|NGP": {
+      "mean": -1.45,
+      "median": 0.0,
+      "count": 11
+    },
+    "PUNE|PUNE": {
+      "mean": -1.32,
+      "median": 0.0,
+      "count": 19
+    }
+  }
+}

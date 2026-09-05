@@ -9,7 +9,7 @@ export default function TrainInfoCard({
 
   return (
 
-    <div className="bg-white rounded-3xl border shadow-sm p-6">
+    <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6">
 
       <div className="flex flex-col lg:flex-row lg:justify-between gap-6">
 

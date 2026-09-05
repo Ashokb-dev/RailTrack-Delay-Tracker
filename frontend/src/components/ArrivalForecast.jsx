@@ -21,6 +21,7 @@ export const ArrivalForecast = ({
   const nextEarliest = nextStop?.arrivalEarliest;
   const nextLatest = nextStop?.arrivalLatest;
   const isNextRangeAvailable = nextStop?.isRangeAvailable === true && Boolean(nextEarliest) && Boolean(nextLatest);
+  const nextScheduled = nextStop?.scheduledArrival || train?.nextStation?.scheduledArrival || "--:--";
 
   // Destination Secondary Forecast
   const dest = forecastData?.destinationForecast || null;
@@ -30,6 +31,7 @@ export const ArrivalForecast = ({
   const destEarliest = dest?.arrivalEarliest || forecastData?.arrivalEarliest;
   const destLatest = dest?.arrivalLatest || forecastData?.arrivalLatest;
   const isDestRangeAvailable = (dest?.isRangeAvailable === true || forecastData?.isRangeAvailable === true) && Boolean(destEarliest) && Boolean(destLatest);
+  const destScheduled = dest?.scheduledArrival || train?.scheduledDestinationEta || "--:--";
 
   const factors = forecastData?.forecastFactors || [
     {
@@ -128,11 +130,19 @@ export const ArrivalForecast = ({
             </div>
           </div>
 
-          <div className="pt-3 border-t border-blue-200/60 flex items-center justify-between text-xs">
-            <span className="text-slate-600 font-medium">Likely arrival</span>
-            <span className="font-semibold text-slate-900 bg-white/80 px-2.5 py-1 rounded-md border border-blue-200">
-              {isNextRangeAvailable ? `${nextEarliest} – ${nextLatest}` : "Likely arrival range unavailable"}
-            </span>
+          <div className="pt-3 border-t border-blue-200/60 space-y-2 text-xs">
+            <div className="flex items-center justify-between">
+              <span className="text-slate-600 font-medium">Likely arrival</span>
+              <span className="font-semibold text-slate-900 bg-white/80 px-2.5 py-1 rounded-md border border-blue-200 whitespace-nowrap">
+                {isNextRangeAvailable ? `${nextEarliest} – ${nextLatest}` : "Likely arrival range unavailable"}
+              </span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-slate-600 font-medium">Scheduled</span>
+              <span className="font-semibold text-slate-900 bg-white/80 px-2.5 py-1 rounded-md border border-blue-200 whitespace-nowrap">
+                {nextScheduled}
+              </span>
+            </div>
           </div>
         </div>
 
@@ -162,11 +172,19 @@ export const ArrivalForecast = ({
             </div>
           </div>
 
-          <div className="pt-3 border-t border-slate-200 flex items-center justify-between text-xs">
-            <span className="text-slate-500 font-medium">Likely arrival</span>
-            <span className="font-medium text-slate-700 bg-white px-2.5 py-1 rounded-md border border-slate-200">
-              {isDestRangeAvailable ? `${destEarliest} – ${destLatest}` : "Likely arrival range unavailable"}
-            </span>
+          <div className="pt-3 border-t border-slate-200 space-y-2 text-xs">
+            <div className="flex items-center justify-between">
+              <span className="text-slate-500 font-medium">Likely arrival</span>
+              <span className="font-medium text-slate-700 bg-white px-2.5 py-1 rounded-md border border-slate-200 whitespace-nowrap">
+                {isDestRangeAvailable ? `${destEarliest} – ${destLatest}` : "Likely arrival range unavailable"}
+              </span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-slate-500 font-medium">Scheduled</span>
+              <span className="font-medium text-slate-700 bg-white px-2.5 py-1 rounded-md border border-slate-200 whitespace-nowrap">
+                {destScheduled}
+              </span>
+            </div>
           </div>
         </div>
       </div>

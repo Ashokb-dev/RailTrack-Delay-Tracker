@@ -18,3 +18,8 @@ __pycache__/
 
 # Dataset (may be large/sensitive)
 backend/*.csv
+
+# Build outputs & temporary folders
+frontend/dist/
+railtrack-ai/
+

@@ -8,14 +8,15 @@ export const CurrentStateCard = ({
   currentDelayMinutes,
   nextStationCode,
   nextStationName,
-  predictedDestinationEta,
-  scheduledDestinationEta,
-  destinationCode,
-  destinationName,
+  nextStationDelayMinutes,
   className
 }) => {
   const isDelayed = currentDelayMinutes > 0;
   const isEarly = currentDelayMinutes < 0;
+
+  const isNextDelayed = typeof nextStationDelayMinutes === "number" && nextStationDelayMinutes > 0;
+  const isNextEarly = typeof nextStationDelayMinutes === "number" && nextStationDelayMinutes < 0;
+  const hasNextDelay = typeof nextStationDelayMinutes === "number";
 
   return (
     <div
@@ -99,22 +100,27 @@ export const CurrentStateCard = ({
         </div>
       </div>
 
-      {/* 4. DESTINATION ETA */}
+      {/* 4. NEXT STATION DELAY */}
       <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs flex flex-col justify-between">
         <div className="flex items-center justify-between text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
-          <span>Destination ETA</span>
-          <Flag className="w-4 h-4 text-emerald-600" />
+          <span>Next Station Delay</span>
+          <Clock className="w-4 h-4 text-red-500" />
         </div>
         <div>
-          <div className="text-2xl font-bold text-blue-900 tracking-tight">
-            {predictedDestinationEta || "--:--"}
+          <div className={cn(
+            "text-2xl font-extrabold tracking-tight whitespace-nowrap",
+            isNextDelayed ? "text-red-600" : isNextEarly ? "text-emerald-600" : "text-blue-600"
+          )}>
+            {hasNextDelay
+              ? (isNextDelayed ? `+${nextStationDelayMinutes} min` : isNextEarly ? `${nextStationDelayMinutes} min` : "On Time")
+              : "--:--"}
           </div>
-          <div className="text-xs font-medium text-slate-600 mt-1">
-            {destinationName || "Destination"} {destinationCode && destinationCode !== destinationName ? `(${destinationCode})` : ""}
+          <div className="text-xs font-medium text-slate-500 mt-1">
+            {isNextDelayed ? "Predicted Delay Increase" : isNextEarly ? "Predicted Time Recovery" : "Predicted On Schedule"}
           </div>
         </div>
         <div className="mt-3 pt-2 border-t border-slate-100 text-xs text-slate-400">
-          Sch: <span className="font-semibold text-slate-600">{scheduledDestinationEta || "--:--"}</span> (XGBoost Estimated)
+          XGBoost predicted delay for {nextStationCode || nextStationName || "next stop"}
         </div>
       </div>
     </div>

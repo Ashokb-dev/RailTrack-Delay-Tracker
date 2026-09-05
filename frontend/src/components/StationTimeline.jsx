@@ -8,7 +8,7 @@ export default function StationTimeline({ stations }) {
 
   return (
 
-    <div className="bg-white rounded-3xl shadow-lg p-6">
+    <div className="bg-white rounded-3xl border border-slate-200 shadow-lg p-6">
 
       <h2 className="text-2xl font-bold mb-6 text-slate-800">
         🚏 Live Station Timeline

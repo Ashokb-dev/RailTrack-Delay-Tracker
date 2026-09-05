@@ -125,7 +125,7 @@ export default function DelayTrendChart({
 
   return (
 
-    <div className="bg-white rounded-3xl border shadow-sm p-6">
+    <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6">
 
       {/* HEADER */}
 

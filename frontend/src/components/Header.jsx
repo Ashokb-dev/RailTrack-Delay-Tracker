@@ -20,7 +20,7 @@ export const Header = ({ className }) => {
           <div>
             <div className="flex items-baseline gap-1.5">
               <span className="text-xl font-bold tracking-tight text-slate-900">
-                RailTrack <span className="text-blue-600">AI</span>
+                RailTrack
               </span>
             </div>
             <p className="text-[11px] text-slate-500 font-medium hidden sm:block">

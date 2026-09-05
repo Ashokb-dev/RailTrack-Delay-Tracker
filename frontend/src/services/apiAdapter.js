@@ -151,7 +151,7 @@ export function transformPredictionResponse(backendData, trainInfo = {}, routeIn
       code: backendNextFc.station,
       name: backendNextFc.stationName || backendNextFc.station,
       sequence: backendNextFc.sequence ?? null,
-      scheduledArrival: backendNextFc.scheduledArrival || "--:--",
+      scheduledArrival: backendNextFc.scheduledArrival || nextStopObj?.scheduledArrival || "--:--",
       expectedArrival: backendNextFc.expectedArrival || "--:--",
       delayExpected: Math.round(backendNextFc.expectedDelayMinutes ?? 0),
       arrivalEarliest: nextEarliest,
@@ -168,7 +168,7 @@ export function transformPredictionResponse(backendData, trainInfo = {}, routeIn
       code: nextStopObj.code,
       name: nextStopObj.name,
       sequence: nextStopObj.sequence,
-      scheduledArrival: nextStopObj.scheduledArrival,
+      scheduledArrival: nextStopObj.scheduledArrival || "--:--",
       expectedArrival: nextExpected,
       delayExpected: Math.round(nextDelayExp),
       arrivalEarliest: null,
@@ -265,8 +265,10 @@ export function transformPredictionResponse(backendData, trainInfo = {}, routeIn
       name: currentStationObj.name
     },
     nextStation: {
-      code: nextStationObj.code,
-      name: nextStationObj.name
+      code: nextStopForecast?.code || nextStationObj.code,
+      name: nextStopForecast?.name || nextStationObj.name,
+      scheduledArrival: nextStopForecast?.scheduledArrival || nextStationObj?.scheduledArrival || "--:--",
+      delayExpected: nextStopForecast?.delayExpected ?? null
     },
     currentDelayMinutes: Math.round(currentDelayMinutes),
     predictedDestinationEta,

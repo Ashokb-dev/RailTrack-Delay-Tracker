@@ -4,7 +4,7 @@ export default function PredictionConfidence({
 
   return (
 
-    <div className="bg-white rounded-3xl border shadow-sm p-6">
+    <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6">
 
       <div className="flex items-center justify-between">
 
