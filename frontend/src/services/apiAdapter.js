@@ -14,9 +14,20 @@ import { addMinutesToHHMM } from '../utils/timeUtils.js';
 
 export function transformPredictionResponse(backendData, trainInfo = {}, routeInfo = {}) {
   const predictions = Array.isArray(backendData?.predictions) ? backendData.predictions : [];
-  const confidence = typeof backendData?.confidence === "number" ? backendData.confidence : 0;
   const destEta = backendData?.destination_eta || {};
   const fc = backendData?.forecast || {};
+  const serviceStatus = backendData?.service_status || {
+    status: "active",
+    forecastAvailable: true,
+    extremeDelay: false,
+    message: null
+  };
+  const telemetryGuard = backendData?.telemetry || {
+    isLive: true,
+    lastUpdatedAt: null,
+    status: "fresh",
+    warningMessage: null
+  };
 
   // 1. Process Stations Telemetry
   const stations = predictions.map((s, index) => {
@@ -129,7 +140,6 @@ export function transformPredictionResponse(backendData, trainInfo = {}, routeIn
   // Next Stop (First upcoming station strictly after current station)
   const nextStopObj = futureForecastStations[0] || null;
   const backendNextFc = fc.nextStationForecast || null;
-  const h1Quantile = typeof backendNextFc?.quantile === "number" ? backendNextFc.quantile : 4.76;
 
   let nextStopForecast = null;
   if (nextStopObj) {
@@ -138,21 +148,14 @@ export function transformPredictionResponse(backendData, trainInfo = {}, routeIn
       ? backendNextFc.expectedDelayMinutes
       : (nextStopObj.predictedDelayMinutes ?? currentDelayMinutes);
 
-    const isNextCalibrated = fc.calibrated === true && nextStopObj.predictedDelayMinutes !== null;
-    let nextEarliest = backendNextFc?.earliestLikelyArrival || null;
-    let nextLatest = backendNextFc?.latestLikelyArrival || null;
-
-    if (!nextEarliest && isNextCalibrated && nextStopObj.scheduledArrival && nextStopObj.scheduledArrival !== "--:--") {
-      const lowerD = Math.max(0, nextDelayExp - h1Quantile);
-      const upperD = nextDelayExp + h1Quantile;
-      nextEarliest = addMinutesToHHMM(nextStopObj.scheduledArrival, lowerD);
-      nextLatest = addMinutesToHHMM(nextStopObj.scheduledArrival, upperD);
-    }
+    const isNextCalibrated = fc.calibrated === true && Boolean(backendNextFc?.earliestLikelyArrival) && Boolean(backendNextFc?.latestLikelyArrival);
+    const nextEarliest = isNextCalibrated ? backendNextFc.earliestLikelyArrival : null;
+    const nextLatest = isNextCalibrated ? backendNextFc.latestLikelyArrival : null;
 
     nextStopForecast = {
-      code: nextStopObj.code,
-      name: nextStopObj.name,
-      scheduledArrival: nextStopObj.scheduledArrival,
+      code: backendNextFc?.station || nextStopObj.code,
+      name: backendNextFc?.stationName || nextStopObj.name,
+      scheduledArrival: backendNextFc?.scheduledArrival || nextStopObj.scheduledArrival,
       expectedArrival: nextExpected,
       delayExpected: Math.round(nextDelayExp),
       arrivalEarliest: nextEarliest,
@@ -257,7 +260,9 @@ export function transformPredictionResponse(backendData, trainInfo = {}, routeIn
     scheduledDestinationEta,
     predictedFinalDelayMinutes: Math.round(predictedFinalDelayMinutes),
     lastUpdatedSecondsAgo: 15,
-    confidence, // Backend heuristic score
+    serviceStatus,
+    telemetryGuard,
+    forecastAvailable: serviceStatus.forecastAvailable !== false,
     stations,
     passedStations,
     observedStations: stations.filter(s => s.isObserved),

@@ -47,7 +47,14 @@ export const DelayPropagationChart = ({ stations = [], className }) => {
             <YAxis stroke="#64748b" fontSize={11} unit=" m" tickLine={false} />
             <Tooltip
               contentStyle={{ backgroundColor: "#ffffff", borderRadius: "12px", border: "1px solid #cbd5e1", fontSize: "12px" }}
-              formatter={(value, name) => [`${value} min`, name === "actualDelay" ? "Observed Delay" : name === "predictedDelay" ? "XGBoost Predicted Delay" : "Scheduled Baseline"]}
+              formatter={(value, name, item) => [
+                `${value} min`,
+                item?.dataKey === "actualDelay"
+                  ? "Observed Delay"
+                  : item?.dataKey === "predictedDelay"
+                  ? "XGBoost Predicted Delay"
+                  : "Scheduled Baseline"
+              ]}
               labelFormatter={(label) => `Station: ${label}`}
             />
             <Legend wrapperStyle={{ fontSize: "12px", paddingTop: "10px" }} />

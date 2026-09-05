@@ -75,6 +75,65 @@ app.post("/predict-future-stations", async (req, res) => {
       ? dataObj.delayMinutes
       : (typeof currentLocation?.delayMinutes === "number" ? currentLocation.delayMinutes : null);
 
+    // Telemetry Freshness Evaluation (~30 min threshold)
+    const isLive = dataObj.isLive !== false && liveData?.isLive !== false;
+    const lastUpdatedAt = dataObj.lastUpdatedAt || currentLocation?.lastUpdatedAt || null;
+    let telemetryStatus = "fresh";
+    let telemetryWarning = null;
+
+    if (!isLive) {
+      telemetryStatus = "not_live";
+      telemetryWarning = "Live train data is not active. Forecast may be less reliable.";
+    } else if (lastUpdatedAt) {
+      const updatedTime = new Date(lastUpdatedAt).getTime();
+      const nowTime = Date.now();
+      if (!isNaN(updatedTime) && (nowTime - updatedTime) > 30 * 60 * 1000) {
+        telemetryStatus = "stale";
+        telemetryWarning = "Live train data is stale. Forecast may be less reliable.";
+      }
+    } else {
+      telemetryStatus = "unknown";
+    }
+
+    const telemetry = {
+      isLive,
+      lastUpdatedAt,
+      status: telemetryStatus,
+      warningMessage: telemetryWarning
+    };
+
+    // Service Status Evaluation (Cancelled / Diverted / Missing Location / Extreme Delay)
+    const rawStatus = String(dataObj.status || currentLocation?.status || "").toUpperCase();
+    let serviceStatus = {
+      status: "active",
+      forecastAvailable: true,
+      extremeDelay: typeof liveDelayMinutes === "number" && liveDelayMinutes > 180,
+      message: null
+    };
+
+    if (rawStatus.includes("CANCEL")) {
+      serviceStatus = {
+        status: "cancelled",
+        forecastAvailable: false,
+        extremeDelay: false,
+        message: "Train cancelled — arrival forecast unavailable."
+      };
+    } else if (rawStatus.includes("DIVERT")) {
+      serviceStatus = {
+        status: "diverted",
+        forecastAvailable: false,
+        extremeDelay: false,
+        message: "Train diverted — arrival forecast unavailable."
+      };
+    } else if (!currentLocation) {
+      serviceStatus = {
+        status: "location_missing",
+        forecastAvailable: false,
+        extremeDelay: false,
+        message: "Current train position unavailable."
+      };
+    }
+
     // Preserve full train route so actual live location is never sliced out
     console.log("Total route stations:", routeStations.length);
 
@@ -174,6 +233,41 @@ app.post("/predict-future-stations", async (req, res) => {
       };
     });
 
+    // Early Exit if Forecast is Unavailable (Cancelled / Diverted / Missing Location)
+    if (!serviceStatus.forecastAvailable) {
+      return res.json({
+        service_status: serviceStatus,
+        telemetry,
+        current_location: currentLocation,
+        next_halt: nextHalt,
+        previous_halt: previousHalt,
+        live_delay_minutes: liveDelayMinutes,
+        destination_eta: null,
+        forecast: {
+          expectedDelayMinutes: 0,
+          lowerDelayMinutes: null,
+          upperDelayMinutes: null,
+          expectedArrival: "--:--",
+          earliestLikelyArrival: null,
+          latestLikelyArrival: null,
+          calibrated: false,
+          method: "unavailable",
+          nextStationForecast: null
+        },
+        predictions: stations.map(s => ({
+          station: s.station,
+          stationName: s.stationName,
+          scheduled_time: s.scheduled_time,
+          actual_time: s.actual_delay !== null ? "--:--" : null,
+          predicted_time: "--:--",
+          delay: s.actual_delay,
+          predicted_delay: null,
+          delta: 0,
+          type: s.actual_delay !== null ? "real" : "predicted"
+        }))
+      });
+    }
+
     // ======================================
     // INPUT DATA
     // ======================================
@@ -185,6 +279,8 @@ app.post("/predict-future-stations", async (req, res) => {
       next_halt: nextHalt,
       previous_halt: previousHalt,
       live_delay_minutes: liveDelayMinutes,
+      service_status: serviceStatus,
+      telemetry,
       stations,
     };
 

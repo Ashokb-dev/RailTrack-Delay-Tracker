@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ChevronDown, ChevronUp, HelpCircle, Navigation, MapPin } from 'lucide-react';
+import { ChevronDown, ChevronUp, HelpCircle, Navigation, MapPin, AlertTriangle, AlertCircle } from 'lucide-react';
 import { cn } from '../utils/cn';
 
 export const ArrivalForecast = ({
@@ -8,6 +8,10 @@ export const ArrivalForecast = ({
   className
 }) => {
   const [isFactorsExpanded, setIsFactorsExpanded] = useState(false);
+
+  const serviceStatus = train?.serviceStatus || {};
+  const telemetryGuard = train?.telemetryGuard || {};
+  const isForecastAvailable = train?.forecastAvailable !== false;
 
   // Next Stop Primary Forecast
   const nextStop = forecastData?.nextStopForecast || null;
@@ -67,7 +71,35 @@ export const ArrivalForecast = ({
         </div>
       </div>
 
-      {/* 2. Forecast Cards: Next Stop (Primary) & Destination (Secondary) */}
+      {/* Telemetry Staleness / Non-Live Warning Banner */}
+      {telemetryGuard.warningMessage && isForecastAvailable && (
+        <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs font-semibold flex items-center gap-2.5">
+          <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+          <span>{telemetryGuard.warningMessage}</span>
+        </div>
+      )}
+
+      {/* Extreme Delay Warning Banner */}
+      {serviceStatus.extremeDelay && isForecastAvailable && (
+        <div className="p-3.5 rounded-xl bg-red-50 border border-red-200 text-red-800 text-xs font-semibold flex items-center gap-2.5">
+          <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
+          <span>Train experiencing extreme delay (&gt;3 hrs). Forecast accuracy may be degraded.</span>
+        </div>
+      )}
+
+      {/* Unavailable Service Status Box (Cancelled / Diverted / Missing Location) */}
+      {!isForecastAvailable ? (
+        <div className="p-5 rounded-2xl bg-amber-50/90 border-2 border-amber-300 text-amber-950 flex items-start gap-3">
+          <AlertTriangle className="w-6 h-6 text-amber-600 shrink-0 mt-0.5" />
+          <div>
+            <h3 className="text-base font-bold">Forecast Unavailable</h3>
+            <p className="text-sm font-medium mt-0.5">
+              {serviceStatus.message || "Arrival forecast unavailable."}
+            </p>
+          </div>
+        </div>
+      ) : (
+      /* 2. Forecast Cards: Next Stop (Primary) & Destination (Secondary) */
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* PRIMARY CARD: NEXT STOP */}
         <div className="p-4 sm:p-5 rounded-2xl bg-blue-50/80 border-2 border-blue-600 shadow-xs flex flex-col justify-between relative">
@@ -99,7 +131,7 @@ export const ArrivalForecast = ({
           <div className="pt-3 border-t border-blue-200/60 flex items-center justify-between text-xs">
             <span className="text-slate-600 font-medium">Likely arrival</span>
             <span className="font-semibold text-slate-900 bg-white/80 px-2.5 py-1 rounded-md border border-blue-200">
-              {isNextRangeAvailable ? `${nextEarliest} – ${nextLatest}` : "Uncalibrated"}
+              {isNextRangeAvailable ? `${nextEarliest} – ${nextLatest}` : "Likely arrival range unavailable"}
             </span>
           </div>
         </div>
@@ -133,11 +165,12 @@ export const ArrivalForecast = ({
           <div className="pt-3 border-t border-slate-200 flex items-center justify-between text-xs">
             <span className="text-slate-500 font-medium">Likely arrival</span>
             <span className="font-medium text-slate-700 bg-white px-2.5 py-1 rounded-md border border-slate-200">
-              {isDestRangeAvailable ? `${destEarliest} – ${destLatest}` : "Uncalibrated"}
+              {isDestRangeAvailable ? `${destEarliest} – ${destLatest}` : "Likely arrival range unavailable"}
             </span>
           </div>
         </div>
       </div>
+      )}
 
       {/* Deterministic Forecast Explanation Message */}
       {forecastData?.message && (

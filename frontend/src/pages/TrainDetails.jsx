@@ -195,7 +195,6 @@ export default function TrainDetails() {
               <div className="lg:col-span-4 space-y-6">
                 <ModelInputs
                   modelEngine={telemetry.modelEngine}
-                  confidence={telemetry.confidence}
                 />
               </div>
             </div>

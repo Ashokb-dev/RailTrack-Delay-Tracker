@@ -446,22 +446,7 @@ for index, station in enumerate(stations):
 
     })
 
-# ======================================
-# CONFIDENCE
-# ======================================
 
-avg_delta = sum(all_deltas) / len(all_deltas)
-
-confidence = max(
-
-    50,
-
-    min(
-        95,
-        100 - avg_delta
-    )
-
-)
 
 # ======================================
 # CONFORMAL CALIBRATED FORECAST
@@ -560,8 +545,11 @@ else:
 
 output = {
 
-    "confidence":
-        round(confidence, 2),
+    "service_status":
+        data.get("service_status"),
+
+    "telemetry":
+        data.get("telemetry"),
 
     "current_location":
         data.get("current_location"),

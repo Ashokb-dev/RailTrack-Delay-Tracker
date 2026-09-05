@@ -30,11 +30,6 @@ export const ModelInputs = ({ modelEngine, confidence, className }) => {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          {typeof confidence === "number" && (
-            <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-              Model Consistency: {confidence}%
-            </span>
-          )}
           {isExpanded ? <ChevronUp className="w-4 h-4 text-slate-500" /> : <ChevronDown className="w-4 h-4 text-slate-500" />}
         </div>
       </button>
