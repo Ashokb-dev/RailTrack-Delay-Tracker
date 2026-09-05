@@ -26,36 +26,72 @@ for train_idx in range(n_trains):
     base_hour = np.random.randint(6, 22)
     prev_delay = 0
     
-    for station_idx, station_code in enumerate(route_stations):
-        seq = station_idx + 1
+    # Pre-generate scheduled times and delays for entire journey
+    journey_delays = []
+    scheduled_times_mins = []
+    dwell_times = []
+    inter_times = []
+    platforms = []
+    scheduled_hours = []
+    
+    curr_d = 0
+    for station_idx in range(n_stops):
+        sh = (base_hour + station_idx * 90 + np.random.randint(-30, 30)) % 24
+        sm = np.random.randint(0, 60)
+        st_mins = sh * 60 + sm
+        scheduled_hours.append(sh)
+        scheduled_times_mins.append(st_mins)
         
-        scheduled_hour = (base_hour + station_idx * 90 + np.random.randint(-30, 30)) % 24
-        scheduled_minute = np.random.randint(0, 60)
-        scheduled_time_minutes = scheduled_hour * 60 + scheduled_minute
-        
-        dwell_time = max(0, np.random.normal(3, 1.5))
+        dt = max(0, np.random.normal(3, 1.5))
+        dwell_times.append(dt)
         
         if station_idx == 0:
-            inter_station_time = 0
+            it = 0
+            curr_d = max(0, int(np.random.normal(5, 8)))
         else:
-            inter_station_time = max(5, np.random.normal(90, 20))
-        
-        platform_num = np.random.randint(1, 10)
-        
-        if station_idx == 0:
-            current_delay = max(0, int(np.random.normal(5, 8)))
-        else:
+            it = max(5, np.random.normal(90, 20))
             recovery_factor = np.random.uniform(0.4, 0.8)
             delay_variation = np.random.normal(0, 5)
-            current_delay = max(0, int(prev_delay * recovery_factor + delay_variation))
+            curr_d = max(0, int(prev_delay * recovery_factor + delay_variation))
+            
+        inter_times.append(it)
+        platforms.append(np.random.randint(1, 10))
+        journey_delays.append(curr_d)
+        prev_delay = curr_d
         
-        delay_arrival_minutes = current_delay
+    dest_sched_mins = scheduled_times_mins[-1]
+    
+    for station_idx, station_code in enumerate(route_stations):
+        seq = station_idx + 1
+        current_delay = journey_delays[station_idx]
+        st_mins = scheduled_times_mins[station_idx]
         
-        journey_max_delay = current_delay
+        # Remaining journey features
+        remaining_stations_count = n_stops - 1 - station_idx
+        rem_sched_mins = dest_sched_mins - st_mins
+        if rem_sched_mins < 0:
+            rem_sched_mins += 1440
+        remaining_scheduled_mins = max(0, rem_sched_mins)
+        
+        # Dynamic delay trend & aggregates up to station_idx - 1 (prior state)
         if station_idx == 0:
-            journey_avg_delay = current_delay
+            delay_trend = 0
+            journey_max_delay_so_far = current_delay
+            journey_avg_delay_so_far = current_delay
+            prev_delay_arr = 0
+            prev_delay_dep = 0
         else:
-            journey_avg_delay = int((journey_avg_delay * station_idx + current_delay) / (station_idx + 1))
+            prev_delay_arr = journey_delays[station_idx - 1]
+            prev_delay_dep = journey_delays[station_idx - 1]
+            
+            if station_idx == 1:
+                delay_trend = journey_delays[0]
+            else:
+                delay_trend = journey_delays[station_idx - 1] - journey_delays[station_idx - 2]
+                
+            prior_delays = journey_delays[:station_idx]
+            journey_max_delay_so_far = int(np.max(prior_delays))
+            journey_avg_delay_so_far = int(np.mean(prior_delays))
         
         record = {
             'train_number': train_number,
@@ -65,23 +101,24 @@ for train_idx in range(n_trains):
             'is_destination': 1 if station_idx == n_stops - 1 else 0,
             'station_code': station_code,
             'station_name': f'{station_code} Station',
-            'scheduled_arrival_minutes': scheduled_time_minutes,
-            'scheduled_departure_minutes': scheduled_time_minutes + dwell_time,
-            'dwell_time_scheduled_mins': dwell_time,
-            'inter_station_scheduled_mins': inter_station_time if station_idx > 0 else 0,
-            'platform_num': platform_num,
+            'scheduled_arrival_minutes': st_mins,
+            'scheduled_departure_minutes': st_mins + dwell_times[station_idx],
+            'dwell_time_scheduled_mins': dwell_times[station_idx],
+            'inter_station_scheduled_mins': inter_times[station_idx],
+            'platform_num': platforms[station_idx],
             'day_of_week': day_of_week,
-            'scheduled_hour': scheduled_hour,
-            'scheduled_departure_hour': (scheduled_hour + int(dwell_time // 60)) % 24,
-            'delay_arrival_minutes': delay_arrival_minutes,
-            'prev_delay_arrival': current_delay if station_idx > 0 else 0,
-            'prev_delay_departure': current_delay if station_idx > 0 else 0,
-            'delay_trend': current_delay,
-            'journey_max_delay_so_far': journey_max_delay,
-            'journey_avg_delay_so_far': journey_avg_delay,
+            'scheduled_hour': scheduled_hours[station_idx],
+            'scheduled_departure_hour': (scheduled_hours[station_idx] + int(dwell_times[station_idx] // 60)) % 24,
+            'delay_arrival_minutes': current_delay,
+            'prev_delay_arrival': prev_delay_arr,
+            'prev_delay_departure': prev_delay_dep,
+            'delay_trend': delay_trend,
+            'journey_max_delay_so_far': journey_max_delay_so_far,
+            'journey_avg_delay_so_far': journey_avg_delay_so_far,
+            'remaining_stations_count': remaining_stations_count,
+            'remaining_scheduled_mins': remaining_scheduled_mins
         }
         records.append(record)
-        prev_delay = current_delay
 
 df = pd.DataFrame(records)
 
@@ -93,4 +130,4 @@ df = df.dropna(subset=['target_delay_delta'])
 
 output_path = 'railway_ml_data.csv'
 df.to_csv(output_path, index=False)
-print(f"Synthetic dataset saved to {output_path}. Total rows: {len(df)}")
+print(f"Phase-2 synthetic dataset saved to {output_path}. Total rows: {len(df)}")

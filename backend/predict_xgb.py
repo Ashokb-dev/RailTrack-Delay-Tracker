@@ -3,6 +3,7 @@ import json
 import os
 import joblib
 import pandas as pd
+import numpy as np
 
 # ======================================
 # LOAD MODEL
@@ -46,7 +47,17 @@ def minutes_to_time(minutes):
 # START
 # ======================================
 
-current_delay = 0
+n_stations = len(stations)
+last_st_sched = stations[-1].get("scheduled_time", "00:00") if stations else "00:00"
+try:
+    l_parts = last_st_sched.split(":")
+    dest_scheduled_mins = int(l_parts[0]) * 60 + int(l_parts[1])
+except Exception:
+    dest_scheduled_mins = 0
+
+delays_so_far = []
+last_delay = 0.0
+prev_last_delay = 0.0
 
 for index, station in enumerate(stations):
 
@@ -65,6 +76,15 @@ for index, station in enumerate(stations):
         hh, mm = 0, 0
         scheduled_time = "00:00"
 
+    st_mins = hh * 60 + mm
+
+    # Remaining journey features
+    remaining_stations_count = n_stations - 1 - index
+    rem_sched_mins = dest_scheduled_mins - st_mins
+    if rem_sched_mins < 0:
+        rem_sched_mins += 1440
+    remaining_scheduled_mins = max(0, rem_sched_mins)
+
     # ======================================
     # REAL STATIONS
     # ======================================
@@ -80,6 +100,13 @@ for index, station in enumerate(stations):
             + mm
             + current_delay
         )
+
+        delays_so_far.append(current_delay)
+        prev_last_delay = last_delay
+        last_delay = current_delay
+        delay_trend = last_delay - prev_last_delay
+        journey_max_delay_so_far = float(np.max(delays_so_far))
+        journey_avg_delay_so_far = float(np.mean(delays_so_far))
 
         # ======================================
         # FEATURES
@@ -127,13 +154,19 @@ for index, station in enumerate(stations):
                 current_delay,
 
             "delay_trend":
-                current_delay,
+                delay_trend,
 
             "journey_max_delay_so_far":
-                current_delay,
+                journey_max_delay_so_far,
 
             "journey_avg_delay_so_far":
-                current_delay
+                journey_avg_delay_so_far,
+
+            "remaining_stations_count":
+                remaining_stations_count,
+
+            "remaining_scheduled_mins":
+                remaining_scheduled_mins
 
         }])
 
@@ -240,6 +273,10 @@ for index, station in enumerate(stations):
     # FUTURE STATIONS
     # ======================================
 
+    delay_trend = last_delay - prev_last_delay
+    journey_max_delay_so_far = float(np.max(delays_so_far)) if delays_so_far else last_delay
+    journey_avg_delay_so_far = float(np.mean(delays_so_far)) if delays_so_far else last_delay
+
     features = pd.DataFrame([{
 
         "sequence":
@@ -276,19 +313,25 @@ for index, station in enumerate(stations):
             station["platform_num"],
 
         "prev_delay_arrival":
-            current_delay,
+            last_delay,
 
         "prev_delay_departure":
-            current_delay,
+            last_delay,
 
         "delay_trend":
-            current_delay,
+            delay_trend,
 
         "journey_max_delay_so_far":
-            current_delay,
+            journey_max_delay_so_far,
 
         "journey_avg_delay_so_far":
-            current_delay
+            journey_avg_delay_so_far,
+
+        "remaining_stations_count":
+            remaining_stations_count,
+
+        "remaining_scheduled_mins":
+            remaining_scheduled_mins
 
     }])
 
@@ -314,12 +357,14 @@ for index, station in enumerate(stations):
 
     next_delay = float(
 
-        current_delay
+        last_delay
         + predicted_delta
 
     )
 
-    current_delay = next_delay
+    prev_last_delay = last_delay
+    last_delay = next_delay
+    delays_so_far.append(next_delay)
 
     # ======================================
     # PREDICTED TIME

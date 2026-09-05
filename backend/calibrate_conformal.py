@@ -11,7 +11,6 @@ def calculate_winkler_score(y_true, lower_bound, upper_bound, alpha=0.20):
     Calculates the Winkler Score for interval forecasts.
     W(y, l, u) = (u - l) + (2/alpha)*(l - y)*I(y < l) + (2/alpha)*(y - u)*I(y > u)
     Penalty multiplier (2 / 0.20) = 10.
-    Lower score indicates tighter intervals with fewer miscoverages.
     """
     y_true = np.array(y_true)
     l = np.array(lower_bound)
@@ -31,8 +30,9 @@ def run_calibration(
     alpha=0.20
 ):
     print("=" * 70)
-    print("RAILTRACK AI - CONFORMAL RESIDUAL CALIBRATION ENGINE")
+    print("RAILTRACK AI - CONFORMAL RESIDUAL CALIBRATION ENGINE (PHASE 2)")
     print("Strict Chronological Train / Calibration / Evaluation Split")
+    print("Dynamic Recursive Features + Remaining Journey Features")
     print("=" * 70)
     
     if not os.path.exists(csv_path):
@@ -54,19 +54,15 @@ def run_calibration(
     
     print(f"Dataset loaded: {len(df)} rows across {df['train_number'].nunique()} trains.")
     
-    # 14 Clean Features (no actual_hour leakage)
+    # 16 Features (Phase 2)
     FEATURES = [
         'sequence', 'is_origin', 'is_destination', 'scheduled_hour',
         'scheduled_departure_hour', 'day_of_week',
         'dwell_time_scheduled_mins', 'inter_station_scheduled_mins',
         'platform_num', 'prev_delay_arrival', 'prev_delay_departure',
-        'delay_trend', 'journey_max_delay_so_far', 'journey_avg_delay_so_far'
+        'delay_trend', 'journey_max_delay_so_far', 'journey_avg_delay_so_far',
+        'remaining_stations_count', 'remaining_scheduled_mins'
     ]
-    
-    # Chronological Journey-Level Partitioning
-    # Train: 2024-01-15, 2024-01-16, 2024-01-17 (3 days, 120 journeys)
-    # Calibration: 2024-01-18 (1 day, 40 journeys)
-    # Test: 2024-01-19 (1 day, 40 journeys)
     
     cal_dates = ['2024-01-18']
     test_dates = ['2024-01-19']
@@ -74,8 +70,8 @@ def run_calibration(
     print(f"Calibration Period: {cal_dates[0]}")
     print(f"Evaluation Period:  {test_dates[0]}")
     
-    # Perform Historical Replay
-    print("\nExecuting historical recursive prediction replay on journeys...")
+    # Execute Historical Replay with Dynamic Recursive Features
+    print("\nExecuting historical recursive prediction replay with Phase-2 dynamic features...")
     t0 = time.time()
     replay_rows = []
     
@@ -89,27 +85,74 @@ def run_calibration(
         if dest_row.empty:
             dest_row = group.iloc[[-1]]
         actual_dest_delay = float(dest_row.iloc[0]['delay_arrival_minutes'])
+        dest_sched_mins = float(dest_row.iloc[0]['scheduled_arrival_minutes'])
         
-        static_feats = group[FEATURES[:9]].values
         delays = group['delay_arrival_minutes'].values
+        sched_mins_list = group['scheduled_arrival_minutes'].values
         
         is_cal = date_str in cal_dates
         is_test = date_str in test_dates
         
         if not (is_cal or is_test):
-            continue  # Skip training journeys for calibration/eval steps
+            continue
         
         for k in range(n_stations - 1):
-            curr_delay = float(delays[k])
+            # Dynamic state tracking initialized from observed history up to k
+            delays_so_far = list(delays[:k + 1])
+            last_delay = float(delays[k])
+            prev_last_delay = float(delays[k - 1]) if k > 0 else last_delay
+            running_max = float(np.max(delays_so_far))
+            running_sum = float(np.sum(delays_so_far))
+            running_count = len(delays_so_far)
             
             # Predict step-by-step target destination delay
             for j in range(k + 1, n_stations):
-                st_feat = static_feats[j]
-                row_feat = np.array([[*st_feat, curr_delay, curr_delay, curr_delay, curr_delay, curr_delay]])
-                pred_delta = float(model.predict(row_feat)[0])
-                curr_delay += pred_delta
+                st_row = group.iloc[j]
+                st_sched_mins = float(sched_mins_list[j])
+                
+                # Remaining journey features
+                rem_stations = n_stations - 1 - j
+                rem_sched_mins = dest_sched_mins - st_sched_mins
+                if rem_sched_mins < 0:
+                    rem_sched_mins += 1440
+                rem_sched_mins = max(0, rem_sched_mins)
+                
+                # Dynamic delay features
+                delay_trend = last_delay - prev_last_delay
+                max_delay_so_far = running_max
+                avg_delay_so_far = running_sum / running_count
+                
+                row_feat = pd.DataFrame([{
+                    "sequence": st_row["sequence"],
+                    "is_origin": st_row["is_origin"],
+                    "is_destination": st_row["is_destination"],
+                    "scheduled_hour": st_row["scheduled_hour"],
+                    "scheduled_departure_hour": st_row["scheduled_departure_hour"],
+                    "day_of_week": st_row["day_of_week"],
+                    "dwell_time_scheduled_mins": st_row["dwell_time_scheduled_mins"],
+                    "inter_station_scheduled_mins": st_row["inter_station_scheduled_mins"],
+                    "platform_num": st_row["platform_num"],
+                    "prev_delay_arrival": last_delay,
+                    "prev_delay_departure": last_delay,
+                    "delay_trend": delay_trend,
+                    "journey_max_delay_so_far": max_delay_so_far,
+                    "journey_avg_delay_so_far": avg_delay_so_far,
+                    "remaining_stations_count": rem_stations,
+                    "remaining_scheduled_mins": rem_sched_mins
+                }])
+                
+                pred_delta = float(model.predict(row_feat[FEATURES])[0])
+                next_d = last_delay + pred_delta
+                
+                # Update dynamic state for next step
+                prev_last_delay = last_delay
+                last_delay = next_d
+                running_max = max(running_max, next_d)
+                running_sum += next_d
+                running_count += 1
                 
             horizon = (n_stations - 1) - k
+            curr_delay = last_delay
             abs_err = abs(actual_dest_delay - curr_delay)
             signed_err = actual_dest_delay - curr_delay
             
@@ -181,7 +224,7 @@ def run_calibration(
     )
     
     print("\n" + "=" * 70)
-    print("HELD-OUT EVALUATION METRICS (Test Set: 2024-01-19, Target: 80.0%)")
+    print("HELD-OUT EVALUATION METRICS (Phase 2 Test Set: 2024-01-19, Target: 80.0%)")
     print("=" * 70)
     print(f"  Calibration Period: {cal_dates[0]}")
     print(f"  Evaluation Period:  {test_dates[0]}")
@@ -242,6 +285,7 @@ def run_calibration(
     params_artifact = {
         "calibrated": True,
         "method": "conformal_residuals",
+        "phase": 2,
         "intervalLevel": target_coverage,
         "sample_count": n_global,
         "train_period": "2024-01-15 to 2024-01-17 (120 journeys)",
@@ -273,7 +317,7 @@ def run_calibration(
         with open("backend/" + output_params_path, "w") as f:
             json.dump(params_artifact, f, indent=2)
         
-    print("\n[SUCCESS] Calibration parameters exported successfully to:", output_params_path)
+    print("\n[SUCCESS] Phase-2 calibration parameters exported successfully to:", output_params_path)
     print("=" * 70)
     return params_artifact
 

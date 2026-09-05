@@ -4,7 +4,7 @@ import os
 from sklearn.metrics import mean_absolute_error, r2_score, mean_squared_error
 from xgboost import XGBRegressor
 
-# Load data
+# Load dataset
 csv_path = 'railway_ml_data.csv'
 if not os.path.exists(csv_path):
     csv_path = 'backend/railway_ml_data.csv'
@@ -15,21 +15,18 @@ print('Full dataset shape:', df.shape)
 # Sort journeys chronologically
 df = df.sort_values(by=['date', 'train_number', 'sequence'])
 
-# 14 Clean Features (removed actual_hour leakage)
+# 16 Features (Phase 2: clean 14 + remaining_stations_count + remaining_scheduled_mins)
 FEATURES = [
     'sequence', 'is_origin', 'is_destination', 'scheduled_hour',
     'scheduled_departure_hour', 'day_of_week',
     'dwell_time_scheduled_mins', 'inter_station_scheduled_mins',
     'platform_num', 'prev_delay_arrival', 'prev_delay_departure',
-    'delay_trend', 'journey_max_delay_so_far', 'journey_avg_delay_so_far'
+    'delay_trend', 'journey_max_delay_so_far', 'journey_avg_delay_so_far',
+    'remaining_stations_count', 'remaining_scheduled_mins'
 ]
 TARGET = 'target_delay_delta'
 
 # Chronological Journey-Level Split by Date
-# Train Set: 2024-01-15, 2024-01-16, 2024-01-17 (3 days, 120 journeys)
-# Calibration Set: 2024-01-18 (1 day, 40 journeys)
-# Test Set: 2024-01-19 (1 day, 40 journeys)
-
 train_dates = ['2024-01-15', '2024-01-16', '2024-01-17']
 cal_dates = ['2024-01-18']
 test_dates = ['2024-01-19']
@@ -38,7 +35,7 @@ train_df = df[df['date'].isin(train_dates)].copy()
 cal_df = df[df['date'].isin(cal_dates)].copy()
 test_df = df[df['date'].isin(test_dates)].copy()
 
-print(f"\nChronological Journey-Level Split:")
+print(f"\nChronological Journey-Level Split (Phase 2):")
 print(f"  Train Dates ({', '.join(train_dates)}): {len(train_df)} station rows across {train_df[['train_number', 'date']].drop_duplicates().shape[0]} journeys")
 print(f"  Calibration Dates ({', '.join(cal_dates)}): {len(cal_df)} station rows across {cal_df[['train_number', 'date']].drop_duplicates().shape[0]} journeys")
 print(f"  Test Dates ({', '.join(test_dates)}): {len(test_df)} station rows across {test_df[['train_number', 'date']].drop_duplicates().shape[0]} journeys")
@@ -72,10 +69,10 @@ print(f'  R2:   {r2:.4f}')
 # Feature importance
 importance = pd.DataFrame({'Feature': FEATURES, 'Importance': model.feature_importances_})
 importance = importance.sort_values(by='Importance', ascending=False)
-print('\nFeature Importance:')
+print('\nFeature Importance (Phase 2):')
 print(importance.to_string(index=False))
 
-# Save model artifact to models/best_model_v1.pkl and best_model_v1.pkl
+# Save model artifact
 os.makedirs('models', exist_ok=True)
 joblib.dump(model, 'models/best_model_v1.pkl')
 joblib.dump(model, 'best_model_v1.pkl')
