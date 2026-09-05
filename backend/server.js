@@ -143,6 +143,16 @@ app.post("/predict-future-stations", async (req, res) => {
     // Preserve full train route so actual live location is never sliced out
     console.log("Total route stations:", routeStations.length);
 
+    // Authoritative Current Station Sequence Boundary
+    let currentSequence = currentLocation?.sequence ?? previousHalt?.sequence ?? null;
+    if (currentSequence === null && (currentLocation?.stationCode || currentLocation?.code)) {
+      const targetCode = currentLocation.stationCode || currentLocation.code;
+      const matchedSt = routeStations.find((s, idx) => (s.station?.code || s.stationCode || s.code) === targetCode);
+      if (matchedSt) {
+        currentSequence = matchedSt.sequence;
+      }
+    }
+
     // ======================================
     // PROCESS STATIONS
     // ======================================
@@ -150,6 +160,9 @@ app.post("/predict-future-stations", async (req, res) => {
     const stations = routeStations.map((station, index) => {
       const stationCode = station.station?.code || station.stationCode || station.code || `ST-${index}`;
       const stationName = station.station?.name || station.stationName || station.name || `Station ${index + 1}`;
+      const stSequence = station.sequence || index + 1;
+
+      const isPassedBySequence = currentSequence !== null && stSequence <= currentSequence;
 
       let actualDelay = null;
       if (station.delayArrival !== undefined && station.delayArrival !== null) {
@@ -162,9 +175,13 @@ app.post("/predict-future-stations", async (req, res) => {
         actualDelay = Number(station.delayDepartureMinutes);
       } else if (station.delayMinutes !== undefined && station.delayMinutes !== null) {
         actualDelay = Number(station.delayMinutes);
-      } else if (station.status === "passed" || station.status === "current") {
+      } else if (isPassedBySequence || station.status === "passed" || station.status === "current") {
         actualDelay = liveDelayMinutes ?? 0;
       }
+
+      const isCurrent = currentSequence !== null ? stSequence === currentSequence : (station.status === "current");
+      const isPassed = currentSequence !== null ? stSequence <= currentSequence : (station.status === "passed" || actualDelay !== null);
+      const computedStatus = isCurrent ? "current" : (isPassed ? "passed" : "upcoming");
 
       const scheduledArrival = station.scheduledArrival
         ? (typeof station.scheduledArrival === "number" ? new Date(station.scheduledArrival * 1000) : new Date(station.scheduledArrival))
@@ -234,8 +251,8 @@ app.post("/predict-future-stations", async (req, res) => {
         dwell_time_scheduled_mins: dwellTime,
         inter_station_scheduled_mins: interStationTime,
         platform_num: platformNum,
-        actual_delay: actualDelay,
-        status: station.status || (actualDelay !== null ? "passed" : "upcoming")
+        actual_delay: isPassed ? actualDelay : null,
+        status: computedStatus
       };
     });
 
