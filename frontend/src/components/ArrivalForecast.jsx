@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ChevronDown, ChevronUp, HelpCircle } from 'lucide-react';
+import { ChevronDown, ChevronUp, HelpCircle, Navigation, MapPin } from 'lucide-react';
 import { cn } from '../utils/cn';
 
 export const ArrivalForecast = ({
@@ -9,16 +9,23 @@ export const ArrivalForecast = ({
 }) => {
   const [isFactorsExpanded, setIsFactorsExpanded] = useState(false);
 
-  const expectedDelay = forecastData?.delayExpected ?? train?.predictedFinalDelayMinutes ?? 0;
-  const expectedArrival = forecastData?.arrivalExpected ?? train?.predictedDestinationEta ?? "--:--";
+  // Next Stop Primary Forecast
+  const nextStop = forecastData?.nextStopForecast || null;
+  const nextCode = nextStop?.code || train?.nextStation?.code || "";
+  const nextName = nextStop?.name || train?.nextStation?.name || "Next Stop";
+  const nextExpected = nextStop?.expectedArrival || "--:--";
+  const nextEarliest = nextStop?.arrivalEarliest;
+  const nextLatest = nextStop?.arrivalLatest;
+  const isNextRangeAvailable = nextStop?.isRangeAvailable === true && Boolean(nextEarliest) && Boolean(nextLatest);
 
-  const isRangeAvailable = forecastData?.isRangeAvailable === true && forecastData?.arrivalEarliest && forecastData?.arrivalLatest;
-
-  const earliestDelay = isRangeAvailable ? forecastData.delayEarliest : null;
-  const latestDelay = isRangeAvailable ? forecastData.delayLatest : null;
-
-  const earliestArrival = isRangeAvailable ? forecastData.arrivalEarliest : "--:--";
-  const latestArrival = isRangeAvailable ? forecastData.arrivalLatest : "--:--";
+  // Destination Secondary Forecast
+  const dest = forecastData?.destinationForecast || null;
+  const destCode = dest?.code || train?.destination?.code || "";
+  const destName = dest?.name || train?.destination?.name || "Destination";
+  const destExpected = dest?.expectedArrival || forecastData?.arrivalExpected || train?.predictedDestinationEta || "--:--";
+  const destEarliest = dest?.arrivalEarliest || forecastData?.arrivalEarliest;
+  const destLatest = dest?.arrivalLatest || forecastData?.arrivalLatest;
+  const isDestRangeAvailable = (dest?.isRangeAvailable === true || forecastData?.isRangeAvailable === true) && Boolean(destEarliest) && Boolean(destLatest);
 
   const factors = forecastData?.forecastFactors || [
     {
@@ -34,7 +41,7 @@ export const ArrivalForecast = ({
       title: "XGBoost Machine Learning Model",
       description: "Station sequence, dwell times, and inter-station schedule buffer analysis.",
       detail: "Point prediction output",
-      impactText: `${expectedDelay >= 0 ? '+' : ''}${expectedDelay} min expected`,
+      impactText: `${train?.predictedFinalDelayMinutes >= 0 ? '+' : ''}${train?.predictedFinalDelayMinutes ?? 0} min expected`,
       type: "operational"
     }
   ];
@@ -55,71 +62,90 @@ export const ArrivalForecast = ({
             Arrival Forecast
           </h2>
           <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
-            XGBoost machine learning prediction for remaining journey
+            XGBoost ML prediction for upcoming stop & destination
           </p>
         </div>
-        <div className="text-xs text-slate-500 font-medium">
-          Destination:{" "}
-          <span className="font-semibold text-slate-900">
-            {train?.destination?.name || "Destination"} ({train?.destination?.code || ""})
-          </span>
+      </div>
+
+      {/* 2. Forecast Cards: Next Stop (Primary) & Destination (Secondary) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* PRIMARY CARD: NEXT STOP */}
+        <div className="p-4 sm:p-5 rounded-2xl bg-blue-50/80 border-2 border-blue-600 shadow-xs flex flex-col justify-between relative">
+          <div className="flex items-center justify-between gap-2 mb-3">
+            <div className="flex items-center gap-1.5 text-xs font-extrabold text-blue-700 uppercase tracking-wider">
+              <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse shrink-0" />
+              <Navigation className="w-3.5 h-3.5 shrink-0" />
+              <span>Next Stop (Primary)</span>
+            </div>
+            {nextCode && (
+              <span className="text-xs font-mono font-bold text-blue-800 bg-blue-100 px-2 py-0.5 rounded">
+                {nextCode}
+              </span>
+            )}
+          </div>
+
+          <div className="mb-4">
+            <h3 className="text-lg sm:text-xl font-bold text-slate-900 tracking-tight">
+              {nextName}
+            </h3>
+            <div className="mt-2 flex items-baseline justify-between">
+              <span className="text-xs text-slate-500 font-medium">Expected Arrival</span>
+              <span className="text-2xl sm:text-3xl font-extrabold text-blue-900">
+                {nextExpected}
+              </span>
+            </div>
+          </div>
+
+          <div className="pt-3 border-t border-blue-200/60 flex items-center justify-between text-xs">
+            <span className="text-slate-600 font-medium">Likely arrival</span>
+            <span className="font-semibold text-slate-900 bg-white/80 px-2.5 py-1 rounded-md border border-blue-200">
+              {isNextRangeAvailable ? `${nextEarliest} – ${nextLatest}` : "Uncalibrated"}
+            </span>
+          </div>
+        </div>
+
+        {/* SECONDARY CARD: DESTINATION */}
+        <div className="p-4 sm:p-5 rounded-2xl bg-slate-50 border border-slate-200 shadow-2xs flex flex-col justify-between">
+          <div className="flex items-center justify-between gap-2 mb-3">
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+              <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+              <span>Destination (Secondary)</span>
+            </div>
+            {destCode && (
+              <span className="text-xs font-mono font-bold text-slate-600 bg-slate-200/60 px-2 py-0.5 rounded">
+                {destCode}
+              </span>
+            )}
+          </div>
+
+          <div className="mb-4">
+            <h3 className="text-lg sm:text-xl font-bold text-slate-800 tracking-tight">
+              {destName}
+            </h3>
+            <div className="mt-2 flex items-baseline justify-between">
+              <span className="text-xs text-slate-500 font-medium">Expected Arrival</span>
+              <span className="text-xl sm:text-2xl font-bold text-slate-900">
+                {destExpected}
+              </span>
+            </div>
+          </div>
+
+          <div className="pt-3 border-t border-slate-200 flex items-center justify-between text-xs">
+            <span className="text-slate-500 font-medium">Likely arrival</span>
+            <span className="font-medium text-slate-700 bg-white px-2.5 py-1 rounded-md border border-slate-200">
+              {isDestRangeAvailable ? `${destEarliest} – ${destLatest}` : "Uncalibrated"}
+            </span>
+          </div>
         </div>
       </div>
 
-      {/* 2. Three Outcomes */}
-      <div className="grid grid-cols-3 gap-2 sm:gap-4 items-stretch">
-        {/* Outcome 1: Earliest */}
-        <div className="p-2.5 sm:p-4 rounded-xl bg-slate-50 border border-slate-200 flex flex-col justify-between text-center">
-          <div className="text-[11px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
-            Earliest likely
-          </div>
-          <div className="my-0.5 sm:my-1">
-            <span className="text-base sm:text-xl font-bold text-slate-700">
-              {earliestArrival}
-            </span>
-          </div>
-          <div className="mt-1">
-            <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] sm:text-xs font-medium bg-slate-100 text-slate-600 border border-slate-200">
-              {earliestDelay !== null ? `+${earliestDelay} min` : "Uncalibrated"}
-            </span>
-          </div>
+      {/* Deterministic Forecast Explanation Message */}
+      {forecastData?.message && (
+        <div className="p-3.5 rounded-xl bg-blue-50/50 border border-blue-100 text-xs sm:text-sm font-medium text-slate-800 flex items-start gap-2.5">
+          <span className="w-2 h-2 rounded-full bg-blue-600 shrink-0 mt-1.5" />
+          <p className="leading-relaxed">{forecastData.message}</p>
         </div>
-
-        {/* Outcome 2: Expected (Primary Point Prediction) */}
-        <div className="p-2.5 sm:p-4.5 rounded-xl bg-blue-50/80 border-2 border-blue-600 shadow-xs flex flex-col justify-between text-center relative">
-          <div className="flex items-center justify-center gap-1 text-[11px] sm:text-xs font-bold text-blue-700 uppercase tracking-wider mb-1">
-            <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse shrink-0" />
-            <span>Expected (XGBoost)</span>
-          </div>
-          <div className="my-0.5 sm:my-1">
-            <span className="text-xl sm:text-3xl font-extrabold text-blue-900 tracking-tight">
-              {expectedArrival}
-            </span>
-          </div>
-          <div className="mt-1">
-            <span className="inline-flex items-center px-2.5 py-1 rounded-md text-[10px] sm:text-xs font-bold bg-blue-600 text-white shadow-2xs">
-              {expectedDelay >= 0 ? `+${expectedDelay}` : expectedDelay} min delay
-            </span>
-          </div>
-        </div>
-
-        {/* Outcome 3: Latest */}
-        <div className="p-2.5 sm:p-4 rounded-xl bg-slate-50 border border-slate-200 flex flex-col justify-between text-center">
-          <div className="text-[11px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
-            Latest likely
-          </div>
-          <div className="my-0.5 sm:my-1">
-            <span className="text-base sm:text-xl font-bold text-slate-700">
-              {latestArrival}
-            </span>
-          </div>
-          <div className="mt-1">
-            <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] sm:text-xs font-medium bg-slate-100 text-slate-600 border border-slate-200">
-              {latestDelay !== null ? `+${latestDelay} min` : "Uncalibrated"}
-            </span>
-          </div>
-        </div>
-      </div>
+      )}
 
       {/* 3. Info Strip */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3 border-t border-slate-100 text-xs sm:text-sm">
@@ -131,9 +157,9 @@ export const ArrivalForecast = ({
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="text-slate-500 font-medium">Expected Delay:</span>
+          <span className="text-slate-500 font-medium">Live Delay:</span>
           <span className="font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md">
-            {expectedDelay >= 0 ? `+${expectedDelay}` : expectedDelay} min
+            {train?.currentDelayMinutes >= 0 ? `+${train?.currentDelayMinutes}` : train?.currentDelayMinutes} min
           </span>
         </div>
       </div>

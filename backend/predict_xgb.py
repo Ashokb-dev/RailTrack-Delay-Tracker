@@ -485,7 +485,7 @@ if destination_eta and cal_data and cal_data.get("calibrated"):
     horizon_key = str(max(1, future_count))
     
     horiz_quantiles = cal_data.get("horizon_quantiles", {})
-    global_q = float(cal_data.get("global_quantile", 6.52))
+    global_q = float(cal_data.get("global_quantile", 5.06))
     q = float(horiz_quantiles.get(horizon_key, global_q))
     
     lower_delay = max(0.0, round(exp_delay - q, 2))
@@ -495,6 +495,36 @@ if destination_eta and cal_data and cal_data.get("calibrated"):
     earliest_arrival = minutes_to_time(ds_mins + lower_delay)
     expected_arrival = destination_eta["predicted_time"]
     latest_arrival = minutes_to_time(ds_mins + upper_delay)
+
+    # Next station H1 conformal forecast
+    next_pred = next((p for p in predictions if p.get("type") == "predicted"), None)
+    next_forecast = None
+    if next_pred:
+        h1_q = float(horiz_quantiles.get("1", 4.76))
+        next_exp_delay = float(next_pred.get("delay", 0.0))
+        next_lower = max(0.0, round(next_exp_delay - h1_q, 2))
+        next_upper = round(next_exp_delay + h1_q, 2)
+        n_sched = next_pred.get("scheduled_time", "00:00")
+        try:
+            n_parts = n_sched.split(":")
+            n_mins = int(n_parts[0]) * 60 + int(n_parts[1])
+        except Exception:
+            n_mins = 0
+        next_earliest = minutes_to_time(n_mins + next_lower)
+        next_latest = minutes_to_time(n_mins + next_upper)
+        next_forecast = {
+            "station": next_pred.get("station"),
+            "stationName": next_pred.get("stationName"),
+            "scheduledArrival": n_sched,
+            "expectedArrival": next_pred.get("predicted_time"),
+            "expectedDelayMinutes": round(next_exp_delay, 2),
+            "lowerDelayMinutes": round(next_lower, 2),
+            "upperDelayMinutes": round(next_upper, 2),
+            "earliestLikelyArrival": next_earliest,
+            "latestLikelyArrival": next_latest,
+            "horizon": 1,
+            "quantile": h1_q
+        }
     
     forecast = {
         "expectedDelayMinutes": round(exp_delay, 2),
@@ -505,7 +535,8 @@ if destination_eta and cal_data and cal_data.get("calibrated"):
         "latestLikelyArrival": latest_arrival,
         "intervalLevel": float(cal_data.get("intervalLevel", 0.8)),
         "calibrated": True,
-        "method": str(cal_data.get("method", "conformal_residuals"))
+        "method": str(cal_data.get("method", "conformal_residuals")),
+        "nextStationForecast": next_forecast
     }
 else:
     exp_delay = float(destination_eta["delay"]) if destination_eta else 0.0
@@ -519,7 +550,8 @@ else:
         "latestLikelyArrival": None,
         "intervalLevel": 0.8,
         "calibrated": False,
-        "method": "uncalibrated"
+        "method": "uncalibrated",
+        "nextStationForecast": None
     }
 
 # ======================================

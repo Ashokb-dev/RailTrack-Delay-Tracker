@@ -126,6 +126,41 @@ export function transformPredictionResponse(backendData, trainInfo = {}, routeIn
   const passedStations = stations.slice(0, currentStationIdx);
   const futureForecastStations = stations.slice(currentStationIdx + 1);
 
+  // Next Stop (First upcoming station strictly after current station)
+  const nextStopObj = futureForecastStations[0] || null;
+  const backendNextFc = fc.nextStationForecast || null;
+  const h1Quantile = typeof backendNextFc?.quantile === "number" ? backendNextFc.quantile : 4.76;
+
+  let nextStopForecast = null;
+  if (nextStopObj) {
+    const nextExpected = backendNextFc?.expectedArrival || nextStopObj.predictedArrival || "--:--";
+    const nextDelayExp = typeof backendNextFc?.expectedDelayMinutes === "number"
+      ? backendNextFc.expectedDelayMinutes
+      : (nextStopObj.predictedDelayMinutes ?? currentDelayMinutes);
+
+    const isNextCalibrated = fc.calibrated === true && nextStopObj.predictedDelayMinutes !== null;
+    let nextEarliest = backendNextFc?.earliestLikelyArrival || null;
+    let nextLatest = backendNextFc?.latestLikelyArrival || null;
+
+    if (!nextEarliest && isNextCalibrated && nextStopObj.scheduledArrival && nextStopObj.scheduledArrival !== "--:--") {
+      const lowerD = Math.max(0, nextDelayExp - h1Quantile);
+      const upperD = nextDelayExp + h1Quantile;
+      nextEarliest = addMinutesToHHMM(nextStopObj.scheduledArrival, lowerD);
+      nextLatest = addMinutesToHHMM(nextStopObj.scheduledArrival, upperD);
+    }
+
+    nextStopForecast = {
+      code: nextStopObj.code,
+      name: nextStopObj.name,
+      scheduledArrival: nextStopObj.scheduledArrival,
+      expectedArrival: nextExpected,
+      delayExpected: Math.round(nextDelayExp),
+      arrivalEarliest: nextEarliest,
+      arrivalLatest: nextLatest,
+      isRangeAvailable: isNextCalibrated && Boolean(nextEarliest) && Boolean(nextLatest) && nextEarliest !== "--:--" && nextLatest !== "--:--"
+    };
+  }
+
   // Destination station: Last station on the route
   const lastStation = stations[stations.length - 1] || {};
   const destinationCode = lastStation.code || routeInfo.to || "SBC";
@@ -138,9 +173,24 @@ export function transformPredictionResponse(backendData, trainInfo = {}, routeIn
 
   const isRangeAvailable = fc.calibrated === true && Boolean(fc.earliestLikelyArrival) && Boolean(fc.latestLikelyArrival);
 
+  const destinationForecast = {
+    code: destinationCode,
+    name: destinationName,
+    scheduledArrival: scheduledDestinationEta,
+    expectedArrival: predictedDestinationEta,
+    delayExpected: Math.round(predictedFinalDelayMinutes),
+    arrivalEarliest: isRangeAvailable ? fc.earliestLikelyArrival : null,
+    arrivalLatest: isRangeAvailable ? fc.latestLikelyArrival : null,
+    isRangeAvailable
+  };
+
   // Natural Language Forecast Explanation Message
   const message = generateForecastMessage({
     currentDelayMinutes,
+    nextStationName: nextStopForecast?.name,
+    nextExpectedArrival: nextStopForecast?.expectedArrival,
+    nextEarliest: nextStopForecast?.arrivalEarliest,
+    nextLatest: nextStopForecast?.arrivalLatest,
     expectedDelayMinutes: predictedFinalDelayMinutes,
     lowerDelayMinutes: fc.lowerDelayMinutes,
     upperDelayMinutes: fc.upperDelayMinutes,
@@ -160,6 +210,8 @@ export function transformPredictionResponse(backendData, trainInfo = {}, routeIn
     intervalLevel: fc.intervalLevel || 0.8,
     method: fc.method || "uncalibrated",
     message,
+    nextStopForecast,
+    destinationForecast,
     forecastFactors: [
       {
         id: "current_delay",
