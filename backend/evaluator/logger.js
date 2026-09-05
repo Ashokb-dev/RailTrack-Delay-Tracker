@@ -1,6 +1,6 @@
 /**
- * Phase 6 Forecast Snapshot Logger
- * Records forecast observations (Next Stop & Destination) without data leakage or fake confidence.
+ * Phase 6B Forecast Snapshot Logger
+ * Records forecast observations (Next Stop & Destination) with deterministic fingerprint deduplication.
  */
 
 const fs = require('fs');
@@ -25,6 +25,23 @@ function readJsonl(filePath) {
   } catch (err) {
     return [];
   }
+}
+
+// Deterministic Snapshot Fingerprint (only suppresses genuinely identical predictions)
+function generateFingerprint(snap) {
+  return [
+    snap.trainNumber,
+    snap.journeyDate,
+    snap.currentStation,
+    snap.currentSequence,
+    snap.targetStation,
+    snap.targetSequence,
+    snap.horizon,
+    snap.expectedArrival,
+    snap.expectedDelay,
+    snap.earliestDelay,
+    snap.latestDelay
+  ].join('|');
 }
 
 function recordForecastSnapshot(backendResponse, trainInfo = {}, routeInfo = {}) {
@@ -75,6 +92,7 @@ function recordForecastSnapshot(backendResponse, trainInfo = {}, routeInfo = {})
       telemetryAgeSeconds: telemetry.lastUpdatedAt ? Math.round((nowMs - new Date(telemetry.lastUpdatedAt).getTime()) / 1000) : null,
       serviceStatus: serviceStatus.status || "active"
     };
+    snap1.fingerprint = generateFingerprint(snap1);
     snapshots.push(snap1);
   }
 
@@ -103,21 +121,16 @@ function recordForecastSnapshot(backendResponse, trainInfo = {}, routeInfo = {})
       telemetryAgeSeconds: telemetry.lastUpdatedAt ? Math.round((nowMs - new Date(telemetry.lastUpdatedAt).getTime()) / 1000) : null,
       serviceStatus: serviceStatus.status || "active"
     };
+    snapN.fingerprint = generateFingerprint(snapN);
     snapshots.push(snapN);
   }
 
-  // Deduplication Check
+  // Deduplication Check via Fingerprint
   const existing = readJsonl(config.SNAPSHOTS_FILE);
   const written = [];
 
   for (const snap of snapshots) {
-    const isDuplicate = existing.some(oldSnap => 
-      oldSnap.trainNumber === snap.trainNumber &&
-      oldSnap.journeyDate === snap.journeyDate &&
-      oldSnap.targetStation === snap.targetStation &&
-      oldSnap.expectedArrival === snap.expectedArrival &&
-      (nowMs - new Date(oldSnap.predictionTimestamp).getTime()) < config.DEDUPLICATION_WINDOW_MS
-    );
+    const isDuplicate = existing.some(oldSnap => oldSnap.fingerprint === snap.fingerprint);
     if (!isDuplicate) {
       appendJsonl(config.SNAPSHOTS_FILE, snap);
       written.push(snap);
@@ -129,6 +142,7 @@ function recordForecastSnapshot(backendResponse, trainInfo = {}, routeInfo = {})
 
 module.exports = {
   recordForecastSnapshot,
+  generateFingerprint,
   readJsonl,
   appendJsonl
 };

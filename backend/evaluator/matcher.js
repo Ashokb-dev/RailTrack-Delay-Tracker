@@ -1,6 +1,6 @@
 /**
- * Phase 6 Outcome Matcher
- * Records actual arrival outcomes when stations are passed and matches them to original forecast snapshots.
+ * Phase 6B Outcome Matcher
+ * Evaluates every eligible historical forecast independently against ground-truth actual arrivals.
  */
 
 const fs = require('fs');
@@ -43,7 +43,11 @@ function recordActualOutcomes(stations = [], trainInfo = {}) {
     const targetStation = st.station;
     const targetSequence = st.sequence;
     const actualArrivalDelay = Number(st.actual_delay);
-    const actualTime = st.actual_time || "--:--";
+    
+    // Distinguish actualArrival ground-truth from observedPassedAt
+    const hasActualArrival = Boolean(st.actualArrival || st.actual_time) && (st.actualArrival !== "--:--" && st.actual_time !== "--:--");
+    const actualArrival = hasActualArrival ? (st.actualArrival || st.actual_time) : null;
+    const validArrivalOutcome = hasActualArrival && typeof actualArrivalDelay === "number";
 
     const isDuplicate = existingOutcomes.some(o => 
       o.trainNumber === trainNumber &&
@@ -59,8 +63,9 @@ function recordActualOutcomes(stations = [], trainInfo = {}) {
         journeyDate,
         targetStation,
         targetSequence,
-        actualTime,
+        actualArrival,
         actualArrivalDelay,
+        validArrivalOutcome,
         outcomeTimestamp: nowTs
       };
       appendJsonl(config.OUTCOMES_FILE, outcome);
@@ -85,6 +90,7 @@ function calculateWinklerScore(earliestDelay, latestDelay, actualDelay, alpha = 
   }
 }
 
+// Independent Forecast Evaluation Policy (every eligible forecast is evaluated)
 function matchForecastsAndOutcomes(snapshots, outcomes) {
   const matched = [];
 
@@ -93,11 +99,12 @@ function matchForecastsAndOutcomes(snapshots, outcomes) {
       continue; // Exclude cancelled/diverted from accuracy metrics
     }
 
-    // Find matching outcome
+    // Find actual outcome for this target station where outcome timestamp > forecast timestamp
     const outcome = outcomes.find(o => 
       o.trainNumber === snap.trainNumber &&
       o.journeyDate === snap.journeyDate &&
       o.targetStation === snap.targetStation &&
+      o.validArrivalOutcome === true &&
       new Date(o.outcomeTimestamp).getTime() > new Date(snap.predictionTimestamp).getTime()
     );
 
@@ -131,6 +138,7 @@ function matchForecastsAndOutcomes(snapshots, outcomes) {
         horizon: snap.horizon,
         isDestination: snap.isDestination,
         telemetryStatus: snap.telemetryStatus,
+        validArrivalOutcome: outcome.validArrivalOutcome,
         expectedDelay,
         actualArrivalDelay: actualDelay,
         earliestDelay,

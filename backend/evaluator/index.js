@@ -1,5 +1,5 @@
 /**
- * Phase 6 Evaluator Module Exports
+ * Phase 6B Evaluator Module Exports
  */
 
 const config = require('./config');
