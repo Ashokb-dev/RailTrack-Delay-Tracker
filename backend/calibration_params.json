@@ -1,0 +1,131 @@
+{
+  "calibrated": true,
+  "method": "conformal_residuals",
+  "intervalLevel": 0.8,
+  "sample_count": 264,
+  "train_period": "2024-01-15 to 2024-01-17 (120 journeys)",
+  "calibration_period": "2024-01-18 (40 journeys)",
+  "evaluation_period": "2024-01-19 (40 journeys)",
+  "global_quantile": 5.57,
+  "horizon_quantiles": {
+    "1": 4.58,
+    "2": 6.32,
+    "3": 6.3,
+    "4": 5.4,
+    "5": 5.41,
+    "6": 6.68,
+    "7": 6.31,
+    "8": 5.74
+  },
+  "metrics": {
+    "train_journeys": 120,
+    "cal_journeys": 40,
+    "test_journeys": 40,
+    "cal_samples": 264,
+    "test_samples": 268,
+    "mae": 3.59,
+    "rmse": 4.26,
+    "median_ae": 3.05,
+    "empirical_coverage": 85.07,
+    "mean_interval_width": 11.62,
+    "winkler_score": 14.69,
+    "h1_metrics": {
+      "mae": 3.21,
+      "rmse": 3.76,
+      "median_ae": 2.85,
+      "coverage": 82.5,
+      "width": 9.16,
+      "winkler": 12.68
+    },
+    "horizon_breakdown": {
+      "1": {
+        "cal_samples": 40,
+        "quantile": 4.58,
+        "test_samples": 40,
+        "mae": 3.21,
+        "rmse": 3.76,
+        "median_ae": 2.85,
+        "empirical_coverage": 82.5,
+        "mean_width": 9.16,
+        "winkler_score": 12.68
+      },
+      "2": {
+        "cal_samples": 40,
+        "quantile": 6.32,
+        "test_samples": 40,
+        "mae": 3.23,
+        "rmse": 3.9,
+        "median_ae": 2.95,
+        "empirical_coverage": 90.0,
+        "mean_width": 12.64,
+        "winkler_score": 14.43
+      },
+      "3": {
+        "cal_samples": 40,
+        "quantile": 6.3,
+        "test_samples": 40,
+        "mae": 3.65,
+        "rmse": 4.23,
+        "median_ae": 3.18,
+        "empirical_coverage": 90.0,
+        "mean_width": 12.6,
+        "winkler_score": 14.34
+      },
+      "4": {
+        "cal_samples": 35,
+        "quantile": 5.4,
+        "test_samples": 36,
+        "mae": 3.73,
+        "rmse": 4.38,
+        "median_ae": 3.05,
+        "empirical_coverage": 75.0,
+        "mean_width": 10.8,
+        "winkler_score": 14.8
+      },
+      "5": {
+        "cal_samples": 31,
+        "quantile": 5.41,
+        "test_samples": 32,
+        "mae": 3.67,
+        "rmse": 4.25,
+        "median_ae": 3.14,
+        "empirical_coverage": 84.38,
+        "mean_width": 10.82,
+        "winkler_score": 14.29
+      },
+      "6": {
+        "cal_samples": 28,
+        "quantile": 6.68,
+        "test_samples": 29,
+        "mae": 3.88,
+        "rmse": 4.68,
+        "median_ae": 3.63,
+        "empirical_coverage": 89.66,
+        "mean_width": 13.36,
+        "winkler_score": 16.34
+      },
+      "7": {
+        "cal_samples": 26,
+        "quantile": 6.31,
+        "test_samples": 26,
+        "mae": 3.84,
+        "rmse": 4.63,
+        "median_ae": 3.15,
+        "empirical_coverage": 88.46,
+        "mean_width": 12.62,
+        "winkler_score": 16.32
+      },
+      "8": {
+        "cal_samples": 24,
+        "quantile": 5.74,
+        "test_samples": 25,
+        "mae": 3.73,
+        "rmse": 4.52,
+        "median_ae": 3.17,
+        "empirical_coverage": 80.0,
+        "mean_width": 11.48,
+        "winkler_score": 15.62
+      }
+    }
+  }
+}

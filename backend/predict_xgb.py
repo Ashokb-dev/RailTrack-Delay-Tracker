@@ -1,5 +1,6 @@
 import sys
 import json
+import os
 import joblib
 import pandas as pd
 
@@ -103,9 +104,6 @@ for index, station in enumerate(stations):
                     "scheduled_departure_hour"
                 ],
 
-            "actual_hour":
-                station["actual_hour"],
-
             "day_of_week":
                 data["day_of_week"],
 
@@ -165,6 +163,26 @@ for index, station in enumerate(stations):
             + mm
             + predicted_delay
         )
+
+        if index == len(stations) - 1:
+            dest_scheduled_mins = hh * 60 + mm
+            destination_eta = {
+                "station":
+                    station["station"],
+                "stationName":
+                    station.get("stationName", station["station"]),
+                "predicted_time":
+                    minutes_to_time(
+                        predicted_minutes
+                    ),
+                "delay":
+                    float(
+                        round(
+                            predicted_delay,
+                            2
+                        )
+                    )
+            }
 
         predictions.append({
 
@@ -240,9 +258,6 @@ for index, station in enumerate(stations):
             station[
                 "scheduled_departure_hour"
             ],
-
-        "actual_hour":
-            station["actual_hour"],
 
         "day_of_week":
             data["day_of_week"],
@@ -321,6 +336,7 @@ for index, station in enumerate(stations):
     # ======================================
 
     if index == len(stations) - 1:
+        dest_scheduled_mins = hh * 60 + mm
 
         destination_eta = {
 
@@ -403,6 +419,65 @@ confidence = max(
 )
 
 # ======================================
+# CONFORMAL CALIBRATED FORECAST
+# ======================================
+
+cal_path = os.path.join(os.path.dirname(__file__), "calibration_params.json")
+if not os.path.exists(cal_path):
+    cal_path = "calibration_params.json"
+
+cal_data = None
+if os.path.exists(cal_path):
+    try:
+        with open(cal_path, "r") as f:
+            cal_data = json.load(f)
+    except Exception:
+        cal_data = None
+
+if destination_eta and cal_data and cal_data.get("calibrated"):
+    exp_delay = float(destination_eta["delay"])
+    future_count = sum(1 for p in predictions if p.get("type") == "predicted")
+    horizon_key = str(max(1, future_count))
+    
+    horiz_quantiles = cal_data.get("horizon_quantiles", {})
+    global_q = float(cal_data.get("global_quantile", 6.52))
+    q = float(horiz_quantiles.get(horizon_key, global_q))
+    
+    lower_delay = max(0.0, round(exp_delay - q, 2))
+    upper_delay = round(exp_delay + q, 2)
+    
+    ds_mins = dest_scheduled_mins if 'dest_scheduled_mins' in locals() else 0
+    earliest_arrival = minutes_to_time(ds_mins + lower_delay)
+    expected_arrival = destination_eta["predicted_time"]
+    latest_arrival = minutes_to_time(ds_mins + upper_delay)
+    
+    forecast = {
+        "expectedDelayMinutes": round(exp_delay, 2),
+        "lowerDelayMinutes": round(lower_delay, 2),
+        "upperDelayMinutes": round(upper_delay, 2),
+        "expectedArrival": expected_arrival,
+        "earliestLikelyArrival": earliest_arrival,
+        "latestLikelyArrival": latest_arrival,
+        "intervalLevel": float(cal_data.get("intervalLevel", 0.8)),
+        "calibrated": True,
+        "method": str(cal_data.get("method", "conformal_residuals"))
+    }
+else:
+    exp_delay = float(destination_eta["delay"]) if destination_eta else 0.0
+    expected_arrival = destination_eta["predicted_time"] if destination_eta else "--:--"
+    forecast = {
+        "expectedDelayMinutes": round(exp_delay, 2),
+        "lowerDelayMinutes": None,
+        "upperDelayMinutes": None,
+        "expectedArrival": expected_arrival,
+        "earliestLikelyArrival": None,
+        "latestLikelyArrival": None,
+        "intervalLevel": 0.8,
+        "calibrated": False,
+        "method": "uncalibrated"
+    }
+
+# ======================================
 # FINAL RESPONSE
 # ======================================
 
@@ -425,6 +500,9 @@ output = {
 
     "destination_eta":
         destination_eta,
+
+    "forecast":
+        forecast,
 
     "predictions":
         predictions
