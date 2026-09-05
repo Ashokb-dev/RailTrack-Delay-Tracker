@@ -9,14 +9,46 @@
  * - Future Station Rule: Current station & passed stations are strictly EXCLUDED from future forecast.
  */
 
+import { generateForecastMessage } from '../utils/forecastMessage.js';
+import { addMinutesToHHMM } from '../utils/timeUtils.js';
+
 export function transformPredictionResponse(backendData, trainInfo = {}, routeInfo = {}) {
   const predictions = Array.isArray(backendData?.predictions) ? backendData.predictions : [];
   const confidence = typeof backendData?.confidence === "number" ? backendData.confidence : 0;
   const destEta = backendData?.destination_eta || {};
+  const fc = backendData?.forecast || {};
 
   // 1. Process Stations Telemetry
   const stations = predictions.map((s, index) => {
     const isObserved = s.type === "real" || (s.actual_time !== null && s.actual_time !== undefined);
+
+    // Green Series: Actual Observed Delay at Station i (null if unobserved)
+    const actualDelayMinutes = isObserved 
+      ? (typeof s.delay === "number" ? s.delay : 0) 
+      : null;
+
+    // Blue Series: Target-station aligned XGBoost predicted cumulative arrival delay for Station i
+    let predictedDelayMinutes = null;
+    if (index === 0) {
+      // Origin station has no preceding station prediction targeting it
+      predictedDelayMinutes = null;
+    } else if (predictions[index - 1].type === "real") {
+      // Previous station was real/observed: prediction for station i was generated at station i-1
+      const prev = predictions[index - 1];
+      predictedDelayMinutes = typeof prev.predicted_delay === "number"
+        ? prev.predicted_delay
+        : (typeof prev.delay === "number" ? prev.delay : null);
+    } else if (predictions[index - 1].type === "predicted") {
+      // Previous station was forecast/future: prediction for station i was generated at station i-1
+      const prev = predictions[index - 1];
+      predictedDelayMinutes = typeof prev.delay === "number"
+        ? prev.delay
+        : (typeof s.delay === "number" ? s.delay : null);
+    }
+
+    // Target-station aligned predicted arrival time derived from scheduled time + target predicted delay
+    const predictedArrival = addMinutesToHHMM(s.scheduled_time, predictedDelayMinutes);
+
     return {
       code: s.station || `ST-${index}`,
       name: s.stationName || s.station || `Station ${index + 1}`,
@@ -25,11 +57,11 @@ export function transformPredictionResponse(backendData, trainInfo = {}, routeIn
       scheduledDeparture: s.scheduled_time || "--:--",
       actualArrival: isObserved ? s.actual_time : null,
       actualDeparture: isObserved ? s.actual_time : null,
-      actualDelayMinutes: isObserved ? (s.delay ?? 0) : null,
-      predictedArrival: s.predicted_time || "--:--",
-      predictedDeparture: s.predicted_time || "--:--",
-      predictedDelayMinutes: s.delay ?? s.predicted_delay ?? 0,
-      delayChangeMinutes: s.delta ?? 0,
+      actualDelayMinutes: isObserved ? Math.round(actualDelayMinutes * 100) / 100 : null,
+      predictedArrival,
+      predictedDeparture: predictedArrival,
+      predictedDelayMinutes: predictedDelayMinutes !== null ? Math.round(predictedDelayMinutes * 100) / 100 : null,
+      delayChangeMinutes: typeof s.delta === "number" ? Math.round(s.delta * 100) / 100 : 0,
       status: isObserved ? "OBSERVED" : "FORECAST",
       isObserved,
       platform: s.platform_num ? String(s.platform_num) : "1",
@@ -101,18 +133,33 @@ export function transformPredictionResponse(backendData, trainInfo = {}, routeIn
   const scheduledDestinationEta = lastStation.scheduledArrival || "--:--";
 
   // Point prediction from XGBoost
-  const predictedDestinationEta = destEta.predicted_time || lastStation.predictedArrival || "--:--";
-  const predictedFinalDelayMinutes = destEta.delay ?? lastStation.predictedDelayMinutes ?? currentDelayMinutes;
+  const predictedDestinationEta = fc.expectedArrival || destEta.predicted_time || lastStation.predictedArrival || "--:--";
+  const predictedFinalDelayMinutes = typeof fc.expectedDelayMinutes === "number" ? fc.expectedDelayMinutes : (destEta.delay ?? lastStation.predictedDelayMinutes ?? currentDelayMinutes);
 
-  // 3. Arrival Forecast Data Structure (Rules 2 & 13: Truthful Range Data)
+  const isRangeAvailable = fc.calibrated === true && Boolean(fc.earliestLikelyArrival) && Boolean(fc.latestLikelyArrival);
+
+  // Natural Language Forecast Explanation Message
+  const message = generateForecastMessage({
+    currentDelayMinutes,
+    expectedDelayMinutes: predictedFinalDelayMinutes,
+    lowerDelayMinutes: fc.lowerDelayMinutes,
+    upperDelayMinutes: fc.upperDelayMinutes,
+    calibrated: isRangeAvailable
+  });
+
+  // 3. Arrival Forecast Data Structure
   const arrivalForecast = {
     arrivalExpected: predictedDestinationEta,
     delayExpected: Math.round(predictedFinalDelayMinutes),
-    arrivalEarliest: null, // Range bounds uncalibrated by point XGBoost model
-    arrivalLatest: null,   // Range bounds uncalibrated by point XGBoost model
-    delayEarliest: null,
-    delayLatest: null,
-    isRangeAvailable: false,
+    arrivalEarliest: isRangeAvailable ? fc.earliestLikelyArrival : null,
+    arrivalLatest: isRangeAvailable ? fc.latestLikelyArrival : null,
+    delayEarliest: isRangeAvailable && typeof fc.lowerDelayMinutes === "number" ? Math.round(fc.lowerDelayMinutes) : null,
+    delayLatest: isRangeAvailable && typeof fc.upperDelayMinutes === "number" ? Math.round(fc.upperDelayMinutes) : null,
+    isRangeAvailable,
+    calibrated: isRangeAvailable,
+    intervalLevel: fc.intervalLevel || 0.8,
+    method: fc.method || "uncalibrated",
+    message,
     forecastFactors: [
       {
         id: "current_delay",
@@ -126,7 +173,7 @@ export function transformPredictionResponse(backendData, trainInfo = {}, routeIn
         id: "xgb_model",
         title: "XGBoost Machine Learning Pipeline",
         description: "Evaluates station sequence, dwell times, and inter-station timetable buffers.",
-        detail: "Point prediction model (models/best_model_v1.pkl)",
+        detail: `Point prediction model (${fc.method ? 'calibrated with ' + fc.method : 'models/best_model_v1.pkl'})`,
         impactText: `${predictedFinalDelayMinutes >= 0 ? '+' : ''}${Math.round(predictedFinalDelayMinutes)} min expected`,
         type: "operational"
       }
