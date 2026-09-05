@@ -76,27 +76,32 @@ app.post("/predict-future-stations", async (req, res) => {
       : (typeof currentLocation?.delayMinutes === "number" ? currentLocation.delayMinutes : null);
 
     // Telemetry Freshness Evaluation (~30 min threshold)
-    const isLive = dataObj.isLive !== false && liveData?.isLive !== false;
+    const isExplicitNotLive = dataObj.isLive === false || liveData?.isLive === false;
+    const isLiveSignal = dataObj.isLive !== false && liveData?.isLive !== false;
     const lastUpdatedAt = dataObj.lastUpdatedAt || currentLocation?.lastUpdatedAt || null;
-    let telemetryStatus = "fresh";
+    let telemetryStatus = "unknown";
     let telemetryWarning = null;
 
-    if (!isLive) {
+    if (isExplicitNotLive) {
       telemetryStatus = "not_live";
       telemetryWarning = "Live train data is not active. Forecast may be less reliable.";
     } else if (lastUpdatedAt) {
       const updatedTime = new Date(lastUpdatedAt).getTime();
       const nowTime = Date.now();
-      if (!isNaN(updatedTime) && (nowTime - updatedTime) > 30 * 60 * 1000) {
+      if (isNaN(updatedTime)) {
+        telemetryStatus = "unknown";
+      } else if ((nowTime - updatedTime) > 30 * 60 * 1000) {
         telemetryStatus = "stale";
         telemetryWarning = "Live train data is stale. Forecast may be less reliable.";
+      } else {
+        telemetryStatus = "fresh";
       }
     } else {
       telemetryStatus = "unknown";
     }
 
     const telemetry = {
-      isLive,
+      isLive: dataObj.isLive ?? liveData?.isLive ?? isLiveSignal,
       lastUpdatedAt,
       status: telemetryStatus,
       warningMessage: telemetryWarning
