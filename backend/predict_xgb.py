@@ -225,6 +225,9 @@ for index, station in enumerate(stations):
             "stationName":
                 station.get("stationName", station["station"]),
 
+            "sequence":
+                station.get("sequence"),
+
             "scheduled_time":
                 scheduled_time,
 
@@ -414,6 +417,9 @@ for index, station in enumerate(stations):
         "stationName":
             station.get("stationName", station["station"]),
 
+        "sequence":
+            station.get("sequence"),
+
         "scheduled_time":
             scheduled_time,
 
@@ -482,7 +488,11 @@ if destination_eta and cal_data and cal_data.get("calibrated"):
     latest_arrival = minutes_to_time(ds_mins + upper_delay)
 
     # Next station H1 conformal forecast
-    next_pred = next((p for p in predictions if p.get("type") == "predicted"), None)
+    curr_seq = data.get("current_location", {}).get("sequence") if isinstance(data.get("current_location"), dict) else None
+    next_pred = next(
+        (p for p in predictions if p.get("type") == "predicted" and (curr_seq is None or (p.get("sequence") is not None and p.get("sequence") > curr_seq))),
+        None
+    )
     next_forecast = None
     if next_pred:
         h1_q = float(horiz_quantiles.get("1", 4.76))
@@ -500,6 +510,7 @@ if destination_eta and cal_data and cal_data.get("calibrated"):
         next_forecast = {
             "station": next_pred.get("station"),
             "stationName": next_pred.get("stationName"),
+            "sequence": next_pred.get("sequence"),
             "scheduledArrival": n_sched,
             "expectedArrival": next_pred.get("predicted_time"),
             "expectedDelayMinutes": round(next_exp_delay, 2),

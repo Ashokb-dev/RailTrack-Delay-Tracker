@@ -137,30 +137,43 @@ export function transformPredictionResponse(backendData, trainInfo = {}, routeIn
   const passedStations = stations.slice(0, currentStationIdx);
   const futureForecastStations = stations.slice(currentStationIdx + 1);
 
-  // Next Stop (First upcoming station strictly after current station)
-  const nextStopObj = futureForecastStations[0] || null;
+  // Next Stop (Authoritative target directly from backend forecast)
   const backendNextFc = fc.nextStationForecast || null;
+  const nextStopObj = futureForecastStations[0] || null;
 
   let nextStopForecast = null;
-  if (nextStopObj) {
-    const nextExpected = backendNextFc?.expectedArrival || nextStopObj.predictedArrival || "--:--";
-    const nextDelayExp = typeof backendNextFc?.expectedDelayMinutes === "number"
-      ? backendNextFc.expectedDelayMinutes
-      : (nextStopObj.predictedDelayMinutes ?? currentDelayMinutes);
-
-    const isNextCalibrated = fc.calibrated === true && Boolean(backendNextFc?.earliestLikelyArrival) && Boolean(backendNextFc?.latestLikelyArrival);
+  if (backendNextFc && backendNextFc.station) {
+    const isNextCalibrated = fc.calibrated === true && Boolean(backendNextFc.earliestLikelyArrival) && Boolean(backendNextFc.latestLikelyArrival);
     const nextEarliest = isNextCalibrated ? backendNextFc.earliestLikelyArrival : null;
     const nextLatest = isNextCalibrated ? backendNextFc.latestLikelyArrival : null;
 
     nextStopForecast = {
-      code: backendNextFc?.station || nextStopObj.code,
-      name: backendNextFc?.stationName || nextStopObj.name,
-      scheduledArrival: backendNextFc?.scheduledArrival || nextStopObj.scheduledArrival,
-      expectedArrival: nextExpected,
-      delayExpected: Math.round(nextDelayExp),
+      code: backendNextFc.station,
+      name: backendNextFc.stationName || backendNextFc.station,
+      sequence: backendNextFc.sequence ?? null,
+      scheduledArrival: backendNextFc.scheduledArrival || "--:--",
+      expectedArrival: backendNextFc.expectedArrival || "--:--",
+      delayExpected: Math.round(backendNextFc.expectedDelayMinutes ?? 0),
       arrivalEarliest: nextEarliest,
       arrivalLatest: nextLatest,
       isRangeAvailable: isNextCalibrated && Boolean(nextEarliest) && Boolean(nextLatest) && nextEarliest !== "--:--" && nextLatest !== "--:--"
+    };
+  } else if (nextStopObj) {
+    const nextExpected = nextStopObj.predictedArrival || "--:--";
+    const nextDelayExp = typeof nextStopObj.predictedDelayMinutes === "number"
+      ? nextStopObj.predictedDelayMinutes
+      : currentDelayMinutes;
+
+    nextStopForecast = {
+      code: nextStopObj.code,
+      name: nextStopObj.name,
+      sequence: nextStopObj.sequence,
+      scheduledArrival: nextStopObj.scheduledArrival,
+      expectedArrival: nextExpected,
+      delayExpected: Math.round(nextDelayExp),
+      arrivalEarliest: null,
+      arrivalLatest: null,
+      isRangeAvailable: false
     };
   }
 
