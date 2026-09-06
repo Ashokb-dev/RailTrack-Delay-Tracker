@@ -39,15 +39,19 @@ export default function TrainDetails() {
   };
 
   const fetchPrediction = useCallback(async (isManual = false, isInitial = false) => {
-    if (isFetchingRef.current) return;
+    if (isFetchingRef.current && !isInitial && !isManual) return;
     isFetchingRef.current = true;
 
     const currentRequestId = ++requestIdRef.current;
 
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
+    if (isInitial || isManual) {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+      abortControllerRef.current = new AbortController();
+    } else if (!abortControllerRef.current) {
+      abortControllerRef.current = new AbortController();
     }
-    abortControllerRef.current = new AbortController();
 
     if (isManual) {
       setIsRefreshing(true);
@@ -83,7 +87,7 @@ export default function TrainDetails() {
           searchMode
         },
         {
-          signal: abortControllerRef.current.signal
+          signal: abortControllerRef.current?.signal
         }
       );
 
@@ -142,7 +146,7 @@ export default function TrainDetails() {
         abortControllerRef.current.abort();
       }
     };
-  }, [trainNo, fetchPrediction]);
+  }, [trainNo]);
 
   const handleRefresh = () => {
     fetchPrediction(true, false);
