@@ -76,7 +76,7 @@ app.post("/predict-future-stations", async (req, res) => {
       ? dataObj.delayMinutes
       : (typeof currentLocation?.delayMinutes === "number" ? currentLocation.delayMinutes : null);
 
-    // Telemetry Freshness Evaluation (~30 min threshold)
+    // Telemetry Freshness Evaluation (~30 sec threshold)
     const isExplicitNotLive = dataObj.isLive === false || liveData?.isLive === false;
     const isLiveSignal = dataObj.isLive !== false && liveData?.isLive !== false;
     const lastUpdatedAt = dataObj.lastUpdatedAt || currentLocation?.lastUpdatedAt || null;
