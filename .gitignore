@@ -7,7 +7,7 @@ frontend/.env
 
 # Trained model files (large binaries)
 backend/models/*.pkl
-backend/*.pkl
+!backend/models/best_model_v1.pkl
 
 # Temp prediction files
 backend/temp_prediction*.json
